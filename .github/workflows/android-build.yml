@@ -34,11 +34,17 @@ jobs:
     - name: Build web assets
       run: npm run build
     
+    - name: Make Gradle executable
+      run: chmod +x android/gradlew
+    
     - name: Sync Capacitor
       run: npx cap sync android
     
-    - name: Build with Gradle
-      run: cd android && ./gradlew assembleDebug
+    - name: Build with Gradle (Debug)
+      uses: gradle/gradle-build-action@v3
+      with:
+        arguments: assembleDebug
+        build-root-directory: android
     
     - name: Upload APK
       uses: actions/upload-artifact@v4
@@ -59,6 +65,8 @@ jobs:
           - 自动获取模型列表功能
           - GitHub Actions 自动构建发布
           - 优化用户体验
+          - 修复 Gradle 构建配置
+          - 增加默认模型列表
         generate_release_notes: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
