@@ -18,11 +18,21 @@ pnpm-debug.log*
 *.sln
 *.sw?
 Capacitor.config.ts
-android/
-ios/
-*.xcuserstate
+# Android
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/captures/
+android/.idea/
+android/app/.cxx/
+android/app/release/
+android/app/release/
 *.apk
 *.aab
 *.ap_
 *.apks
 *.dex
+# iOS
+ios/
+*.xcuserstate

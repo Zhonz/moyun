@@ -1,0 +1,12 @@
+# COPY THIS FILE TO android/local.properties
+# AND UPDATE THE PATH BELOW TO YOUR ANDROID SDK LOCATION
+
+# Example paths (uncomment and modify):
+# sdk.dir=C\:\\Users\\YourName\\AppData\\Local\\Android\\Sdk
+# sdk.dir=C\:\\Android\\Sdk
+# sdk.dir=D\:\\AndroidSDK
+
+# To find your SDK:
+# 1. Open Android Studio
+# 2. File > Project Structure > SDK Location
+# 3. Copy that path and paste it above (use double backslash \\)
