@@ -3,7 +3,7 @@ import './styles.css'
 const AI_PROVIDERS = {
     openai: {
         name: "OpenAI",
-        models: [],
+        models: ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo"],
         endpoint: "https://api.openai.com/v1/chat/completions",
         modelsEndpoint: "https://api.openai.com/v1/models",
         requiresAuth: true,
@@ -11,15 +11,15 @@ const AI_PROVIDERS = {
     },
     anthropic: {
         name: "Anthropic",
-        models: [],
+        models: ["claude-3-5-sonnet-20241022", "claude-3-opus", "claude-3-sonnet", "claude-3-haiku"],
         endpoint: "https://api.anthropic.com/v1/messages",
-        modelsEndpoint: "https://api.anthropic.com/v1/models",
+        modelsEndpoint: null,
         requiresAuth: true,
         type: "anthropic"
     },
     deepseek: {
         name: "DeepSeek",
-        models: [],
+        models: ["deepseek-chat", "deepseek-reasoner"],
         endpoint: "https://api.deepseek.com/v1/chat/completions",
         modelsEndpoint: "https://api.deepseek.com/v1/models",
         requiresAuth: true,
@@ -27,7 +27,7 @@ const AI_PROVIDERS = {
     },
     qwen: {
         name: "阿里千问",
-        models: [],
+        models: ["qwen-turbo", "qwen-plus", "qwen-max", "qwen-coder-plus"],
         endpoint: "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
         modelsEndpoint: "https://dashscope.aliyuncs.com/compatible-mode/v1/models",
         requiresAuth: true,
@@ -35,7 +35,7 @@ const AI_PROVIDERS = {
     },
     glm: {
         name: "智谱AI",
-        models: [],
+        models: ["glm-4-flash", "glm-4-plus", "glm-4-long", "glm-4", "glm-3-turbo"],
         endpoint: "https://open.bigmodel.cn/api/paas/v4/chat/completions",
         modelsEndpoint: "https://open.bigmodel.cn/api/paas/v4/models",
         requiresAuth: true,
@@ -43,7 +43,7 @@ const AI_PROVIDERS = {
     },
     moonshot: {
         name: "月之暗面",
-        models: [],
+        models: ["moonshot-v1-8k", "moonshot-v1-32k", "moonshot-v1-128k"],
         endpoint: "https://api.moonshot.cn/v1/chat/completions",
         modelsEndpoint: "https://api.moonshot.cn/v1/models",
         requiresAuth: true,
@@ -51,7 +51,7 @@ const AI_PROVIDERS = {
     },
     doubao: {
         name: "字节豆包",
-        models: [],
+        models: ["ep-20241204153318-5n6lh", "doubao-seed-pro-32k", "doubao-seed-lite-32k"],
         endpoint: "https://ark.cn-beijing.volces.com/api/v3/chat/completions",
         modelsEndpoint: "https://ark.cn-beijing.volces.com/api/v1/models",
         requiresAuth: true,
@@ -59,7 +59,7 @@ const AI_PROVIDERS = {
     },
     yi: {
         name: "零一万物",
-        models: [],
+        models: ["yi-lightning", "yi-large", "yi-large-turbo", "yi-medium"],
         endpoint: "https://api.lingyiwanwu.com/v1/chat/completions",
         modelsEndpoint: "https://api.lingyiwanwu.com/v1/models",
         requiresAuth: true,
@@ -273,8 +273,21 @@ class InkverseApp {
             if (saved) {
                 this.state = { ...this.state, ...JSON.parse(saved) };
             }
+            // 确保默认模型被加载
+            this.ensureDefaultModels();
         } catch (e) {
             console.log('No saved state');
+        }
+    }
+
+    ensureDefaultModels() {
+        // 为每个提供商设置默认模型（如果没有缓存）
+        for (const [provider, config] of Object.entries(AI_PROVIDERS)) {
+            if (!this.state.cachedModels[provider] || this.state.cachedModels[provider].length === 0) {
+                if (config.models && config.models.length > 0) {
+                    this.state.cachedModels[provider] = [...config.models];
+                }
+            }
         }
     }
 
@@ -700,8 +713,8 @@ class InkverseApp {
         const infoEl = document.getElementById('model-update-info');
         
         if (!providerConfig.modelsEndpoint) {
-            infoEl.textContent = `${providerConfig.name} 暂不支持自动获取模型列表`;
-            this.showToast(`${providerConfig.name} 暂不支持自动获取模型列表`, 'error');
+            infoEl.textContent = `${providerConfig.name} 已提供默认模型`;
+            this.showToast(`${providerConfig.name} 使用默认模型`, 'info');
             return;
         }
         
@@ -733,36 +746,52 @@ class InkverseApp {
             }
             
             const data = await response.json();
-            let models = [];
+            let apiModels = [];
             
             if (data.data && Array.isArray(data.data)) {
-                models = data.data
+                apiModels = data.data
                     .map(m => m.id)
                     .filter(id => {
-                        const chatKeywords = ['gpt', 'claude', 'deepseek', 'qwen', 'glm', 'moonshot', 'doubao', 'yi', 'chat', 'model', 'llama', 'mistral'];
+                        const chatKeywords = ['gpt', 'claude', 'deepseek', 'qwen', 'glm', 'moonshot', 'doubao', 'yi', 'chat', 'model', 'llama', 'mistral', 'yi-', 'glm-', 'qwen-'];
                         return chatKeywords.some(keyword => id.toLowerCase().includes(keyword));
                     })
                     .sort();
             }
             
-            if (models.length === 0) {
+            // 合并默认模型和API获取的模型，去重
+            const defaultModels = providerConfig.models || [];
+            const combinedModels = [...new Set([...defaultModels, ...apiModels])].sort();
+            
+            if (combinedModels.length === 0) {
                 infoEl.textContent = '未找到可用模型，请手动添加';
                 this.showToast('未找到可用模型，请手动添加', 'error');
                 return;
             }
             
-            this.state.cachedModels[provider] = models;
+            this.state.cachedModels[provider] = combinedModels;
             this.saveState();
             
             this.updateModelOptions();
             this.renderCurrentModelsList();
-            infoEl.textContent = `成功获取 ${models.length} 个模型`;
-            this.showToast(`成功获取 ${models.length} 个模型！`, 'success');
+            infoEl.textContent = `成功获取 ${apiModels.length} 个模型，共 ${combinedModels.length} 个可用`;
+            this.showToast(`成功更新模型列表！共 ${combinedModels.length} 个模型`, 'success');
             
         } catch (e) {
             console.error('获取模型列表失败:', e);
-            infoEl.textContent = `获取失败：${e.message}`;
-            this.showToast(`获取失败：${e.message}`, 'error');
+            // 如果API获取失败，检查是否有默认模型
+            if (providerConfig.models && providerConfig.models.length > 0) {
+                if (!this.state.cachedModels[provider] || this.state.cachedModels[provider].length === 0) {
+                    this.state.cachedModels[provider] = [...providerConfig.models];
+                    this.saveState();
+                    this.updateModelOptions();
+                    this.renderCurrentModelsList();
+                }
+                infoEl.textContent = `使用默认模型 (${e.message})`;
+                this.showToast(`使用默认模型，您也可以手动添加`, 'info');
+            } else {
+                infoEl.textContent = `获取失败：${e.message}`;
+                this.showToast(`获取失败：${e.message}`, 'error');
+            }
         }
     }
     
