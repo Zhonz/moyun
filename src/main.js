@@ -3,7 +3,7 @@ import './styles.css'
 const AI_PROVIDERS = {
     openai: {
         name: "OpenAI",
-        models: ["gpt-4", "gpt-4-turbo", "gpt-4o", "gpt-3.5-turbo", "gpt-3.5-turbo-16k", "gpt-4-32k"],
+        models: [],
         endpoint: "https://api.openai.com/v1/chat/completions",
         modelsEndpoint: "https://api.openai.com/v1/models",
         requiresAuth: true,
@@ -11,15 +11,15 @@ const AI_PROVIDERS = {
     },
     anthropic: {
         name: "Anthropic",
-        models: ["claude-3-opus", "claude-3-sonnet", "claude-3-haiku", "claude-2.1", "claude-2.0", "claude-instant"],
+        models: [],
         endpoint: "https://api.anthropic.com/v1/messages",
-        modelsEndpoint: null,
+        modelsEndpoint: "https://api.anthropic.com/v1/models",
         requiresAuth: true,
         type: "anthropic"
     },
     deepseek: {
         name: "DeepSeek",
-        models: ["deepseek-chat", "deepseek-coder"],
+        models: [],
         endpoint: "https://api.deepseek.com/v1/chat/completions",
         modelsEndpoint: "https://api.deepseek.com/v1/models",
         requiresAuth: true,
@@ -27,7 +27,7 @@ const AI_PROVIDERS = {
     },
     qwen: {
         name: "阿里千问",
-        models: ["qwen-turbo", "qwen-plus", "qwen-max", "qwen-max-0428", "qwen-2.5-7b", "qwen-2.5-14b", "qwen-2.5-32b", "qwen-2.5-72b"],
+        models: [],
         endpoint: "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
         modelsEndpoint: "https://dashscope.aliyuncs.com/compatible-mode/v1/models",
         requiresAuth: true,
@@ -35,7 +35,7 @@ const AI_PROVIDERS = {
     },
     glm: {
         name: "智谱AI",
-        models: ["glm-4", "glm-3-turbo", "glm-3.5-turbo", "glm-4-flash", "glm-4-vision"],
+        models: [],
         endpoint: "https://open.bigmodel.cn/api/paas/v4/chat/completions",
         modelsEndpoint: "https://open.bigmodel.cn/api/paas/v4/models",
         requiresAuth: true,
@@ -43,7 +43,7 @@ const AI_PROVIDERS = {
     },
     moonshot: {
         name: "月之暗面",
-        models: ["moonshot-v1-8k", "moonshot-v1-32k", "moonshot-v1-128k"],
+        models: [],
         endpoint: "https://api.moonshot.cn/v1/chat/completions",
         modelsEndpoint: "https://api.moonshot.cn/v1/models",
         requiresAuth: true,
@@ -51,7 +51,7 @@ const AI_PROVIDERS = {
     },
     doubao: {
         name: "字节豆包",
-        models: ["doubao-pro-32k", "doubao-pro-4k", "doubao-lite-32k", "doubao-lite-4k"],
+        models: [],
         endpoint: "https://ark.cn-beijing.volces.com/api/v3/chat/completions",
         modelsEndpoint: "https://ark.cn-beijing.volces.com/api/v1/models",
         requiresAuth: true,
@@ -59,7 +59,7 @@ const AI_PROVIDERS = {
     },
     yi: {
         name: "零一万物",
-        models: ["yi-large", "yi-medium", "yi-small", "yi-vision"],
+        models: [],
         endpoint: "https://api.lingyiwanwu.com/v1/chat/completions",
         modelsEndpoint: "https://api.lingyiwanwu.com/v1/models",
         requiresAuth: true,
@@ -68,8 +68,7 @@ const AI_PROVIDERS = {
     custom: {
         name: "自定义",
         endpoint: "",
-        models: ["custom-model-1", "custom-model-2"],
-        modelsEndpoint: null,
+        models: [],
         requiresAuth: true,
         type: "openai"
     }
@@ -228,14 +227,14 @@ const OUTPUT_LENGTHS = {
 class InkverseApp {
     constructor() {
         this.state = {
-            currentMode: 'create', // 'create' or 'chat'
+            currentMode: 'create',
             currentTemplate: null,
             currentCategory: 'novels',
             style: 'general',
             length: 'medium',
             creativity: 0.7,
-            provider: 'openai',
-            model: 'gpt-4',
+            provider: 'deepseek',
+            model: '',
             apiKey: '',
             customEndpoint: '',
             history: [],
@@ -258,13 +257,14 @@ class InkverseApp {
                 template: null,
                 timestamp: null
             },
-            cachedModels: {} // 存储每个提供商的模型列表
+            cachedModels: {}
         };
 
         this.loadState();
         this.initUI();
         this.bindEvents();
         this.autoSaveDraft();
+        this.autoFetchModels();
     }
 
     loadState() {
@@ -588,13 +588,17 @@ class InkverseApp {
             return;
         }
         
-        // Add user message
+        if (!this.state.model) {
+            this.showToast('请先选择或获取模型！', 'error');
+            this.toggleSettings();
+            return;
+        }
+        
         this.state.chatHistory.push({ role: 'user', content: message });
         input.value = '';
         input.style.height = 'auto';
         this.renderChatHistory();
         
-        // Add typing indicator
         const container = document.getElementById('chat-messages');
         container.innerHTML += `
             <div class="chat-message-item bot" id="typing-indicator">
@@ -607,10 +611,8 @@ class InkverseApp {
         try {
             const response = await this.callChatAPI(message);
             
-            // Remove typing indicator
             document.getElementById('typing-indicator')?.remove();
             
-            // Add bot response
             this.state.chatHistory.push({ role: 'assistant', content: response });
             this.saveState();
             this.renderChatHistory();
@@ -618,7 +620,6 @@ class InkverseApp {
         } catch (e) {
             document.getElementById('typing-indicator')?.remove();
             this.showToast(`发送失败：${e.message}`, 'error');
-            // Remove failed user message
             this.state.chatHistory.pop();
             this.renderChatHistory();
         }
@@ -640,7 +641,7 @@ class InkverseApp {
     autoSaveDraft() {
         setInterval(() => {
             this.saveDraft();
-        }, 5000); // Auto-save every 5 seconds
+        }, 5000);
     }
 
     saveDraft() {
@@ -665,7 +666,6 @@ class InkverseApp {
                 promptInput.value = this.state.draft.content;
             }
             
-            // Try to restore template
             if (this.state.draft.template) {
                 const template = this.findTemplateById(this.state.draft.template);
                 if (template) {
@@ -681,6 +681,17 @@ class InkverseApp {
             if (found) return found;
         }
         return null;
+    }
+
+    async autoFetchModels() {
+        if (!this.state.apiKey) return;
+        
+        const provider = this.state.provider;
+        const cachedModels = this.state.cachedModels[provider];
+        
+        if (!cachedModels || cachedModels.length === 0) {
+            await this.fetchModelsFromAPI();
+        }
     }
 
     async fetchModelsFromAPI() {
@@ -705,7 +716,6 @@ class InkverseApp {
             
             let modelsEndpoint = providerConfig.modelsEndpoint;
             if (provider === 'custom' && this.state.customEndpoint) {
-                // 从自定义端点推断模型列表端点
                 const baseUrl = this.state.customEndpoint.replace(/\/chat\/completions$/, '');
                 modelsEndpoint = `${baseUrl}/models`;
             }
@@ -725,12 +735,10 @@ class InkverseApp {
             const data = await response.json();
             let models = [];
             
-            // 解析 OpenAI 格式的模型响应
             if (data.data && Array.isArray(data.data)) {
                 models = data.data
                     .map(m => m.id)
                     .filter(id => {
-                        // 过滤出看起来像聊天模型的ID
                         const chatKeywords = ['gpt', 'claude', 'deepseek', 'qwen', 'glm', 'moonshot', 'doubao', 'yi', 'chat', 'model', 'llama', 'mistral'];
                         return chatKeywords.some(keyword => id.toLowerCase().includes(keyword));
                     })
@@ -738,19 +746,17 @@ class InkverseApp {
             }
             
             if (models.length === 0) {
-                infoEl.textContent = '未找到可用模型';
-                this.showToast('未找到可用模型', 'error');
+                infoEl.textContent = '未找到可用模型，请手动添加';
+                this.showToast('未找到可用模型，请手动添加', 'error');
                 return;
             }
             
-            // 更新缓存
             this.state.cachedModels[provider] = models;
             this.saveState();
             
-            // 更新UI
             this.updateModelOptions();
             this.renderCurrentModelsList();
-            infoEl.textContent = `成功获取 ${models.length} 个模型 (${new Date().toLocaleTimeString()})`;
+            infoEl.textContent = `成功获取 ${models.length} 个模型`;
             this.showToast(`成功获取 ${models.length} 个模型！`, 'success');
             
         } catch (e) {
@@ -766,10 +772,10 @@ class InkverseApp {
         
         const provider = this.state.provider;
         const cachedModels = this.state.cachedModels[provider];
-        const models = cachedModels || AI_PROVIDERS[provider]?.models || [];
+        const models = cachedModels || [];
         
         if (models.length === 0) {
-            listEl.innerHTML = '<div style="color: var(--ink-wash);">暂无模型</div>';
+            listEl.innerHTML = '<div style="color: var(--ink-wash);">暂无模型，请点击"获取模型列表"按钮</div>';
             return;
         }
         
@@ -780,7 +786,6 @@ class InkverseApp {
             </div>
         `).join('');
         
-        // 绑定删除按钮事件
         listEl.querySelectorAll('[data-remove-model]').forEach(btn => {
             btn.addEventListener('click', () => {
                 const index = parseInt(btn.dataset.removeModel);
@@ -799,7 +804,7 @@ class InkverseApp {
         }
         
         const provider = this.state.provider;
-        let models = this.state.cachedModels[provider] || [...AI_PROVIDERS[provider]?.models] || [];
+        let models = this.state.cachedModels[provider] || [];
         
         if (models.includes(modelName)) {
             this.showToast('该模型已存在', 'error');
@@ -820,7 +825,7 @@ class InkverseApp {
     
     removeModel(index) {
         const provider = this.state.provider;
-        let models = this.state.cachedModels[provider] || [...AI_PROVIDERS[provider]?.models] || [];
+        let models = this.state.cachedModels[provider] || [];
         
         if (index < 0 || index >= models.length) return;
         
@@ -855,12 +860,20 @@ class InkverseApp {
         
         const provider = this.state.provider;
         const cachedModels = this.state.cachedModels[provider];
-        const models = cachedModels || AI_PROVIDERS[provider]?.models || [];
+        const models = cachedModels || [];
         
+        if (models.length === 0) {
+            select.innerHTML = '<option value="">请先获取模型列表</option>';
+            select.disabled = true;
+            return;
+        }
+        
+        select.disabled = false;
         select.innerHTML = models.map(m => `<option value="${m}">${m}</option>`).join('');
         
-        // 选中当前模型，如果不在列表中则选第一个
-        if (!models.includes(this.state.model) && models.length > 0) {
+        if (models.includes(this.state.model)) {
+            select.value = this.state.model;
+        } else {
             this.state.model = models[0];
             select.value = this.state.model;
         }
@@ -878,8 +891,15 @@ class InkverseApp {
         
         document.getElementById('provider-select')?.addEventListener('change', (e) => {
             this.state.provider = e.target.value;
+            this.state.model = '';
             this.updateModelOptions();
             this.renderCurrentModelsList();
+            
+            if (this.state.apiKey) {
+                setTimeout(() => {
+                    this.fetchModelsFromAPI();
+                }, 500);
+            }
         });
         
         document.getElementById('model-select')?.addEventListener('change', (e) => {
@@ -924,41 +944,34 @@ class InkverseApp {
             }
         });
 
-        // Auto-resize chat input
         chatInput?.addEventListener('input', () => {
             chatInput.style.height = 'auto';
             chatInput.style.height = Math.min(chatInput.scrollHeight, 120) + 'px';
         });
 
-        // Auto-save draft
         const promptInput = document.getElementById('prompt-input');
         promptInput?.addEventListener('input', () => {
             this.saveDraft();
         });
 
-        // 模型刷新按钮
         document.getElementById('refresh-models-btn')?.addEventListener('click', () => {
             this.fetchModelsFromAPI();
         });
 
-        // 自动获取模型按钮
         document.getElementById('auto-fetch-models-btn')?.addEventListener('click', () => {
             this.fetchModelsFromAPI();
         });
 
-        // 手动添加模型按钮
         document.getElementById('add-manual-model-btn')?.addEventListener('click', () => {
             this.addManualModel();
         });
 
-        // 手动添加模型输入框回车事件
         document.getElementById('manual-model-input')?.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 this.addManualModel();
             }
         });
 
-        // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
             if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
                 e.preventDefault();
@@ -996,13 +1009,18 @@ class InkverseApp {
             return;
         }
 
+        if (!this.state.model) {
+            this.showToast('请先选择或获取模型！', 'error');
+            this.toggleSettings();
+            return;
+        }
+
         this.state.isGenerating = true;
         const btn = document.getElementById('generate-btn');
         const loadingIndicator = document.getElementById('loading-indicator');
         if (btn) btn.disabled = true;
         if (loadingIndicator) loadingIndicator.style.display = 'flex';
 
-        // Show streaming result area
         this.displayStreamingResult('正在创作中...');
 
         try {
@@ -1020,7 +1038,6 @@ class InkverseApp {
             };
             this.state.history.push(historyItem);
             
-            // Update stats
             this.state.stats.totalCreations++;
             this.state.stats.lastUsed = Date.now();
             if (this.state.currentTemplate) {
@@ -1074,7 +1091,6 @@ class InkverseApp {
         if (contentEl) {
             const cursor = '<span class="streaming-cursor">|</span>';
             contentEl.innerHTML = contentEl.textContent + chunk + cursor;
-            // Auto scroll
             contentEl.scrollTop = contentEl.scrollHeight;
         }
     }
@@ -1223,7 +1239,6 @@ class InkverseApp {
                             onChunk(content);
                         }
                     } catch (e) {
-                        // Ignore parse errors for streaming
                     }
                 }
             }
@@ -1283,7 +1298,6 @@ class InkverseApp {
                             onChunk(content);
                         }
                     } catch (e) {
-                        // Ignore parse errors for streaming
                     }
                 }
             }
@@ -1412,6 +1426,13 @@ class InkverseApp {
         this.state.model = document.getElementById('model-select').value;
         this.saveState();
         this.toggleSettings();
+        
+        if (this.state.apiKey) {
+            setTimeout(() => {
+                this.fetchModelsFromAPI();
+            }, 1000);
+        }
+        
         this.showToast('设置已保存！');
     }
 
@@ -1428,7 +1449,6 @@ class InkverseApp {
         }, 2500);
     }
 
-    // Templates Panel
     toggleTemplatesPanel() {
         const panel = document.getElementById('templates-panel');
         panel?.classList.toggle('open');
@@ -1492,9 +1512,8 @@ class InkverseApp {
         this.state.customTemplates.push(newTemplate);
         this.saveState();
         this.renderCustomTemplates();
-        this.renderTemplates(); // Refresh templates display
+        this.renderTemplates();
 
-        // Clear form
         document.getElementById('new-template-name').value = '';
         document.getElementById('new-template-prompt').value = '';
         document.getElementById('new-template-example').value = '';
@@ -1510,7 +1529,6 @@ class InkverseApp {
         document.getElementById('new-template-prompt').value = template.prompt;
         document.getElementById('new-template-example').value = template.example;
 
-        // Remove old one
         this.state.customTemplates.splice(index, 1);
         this.saveState();
         this.renderCustomTemplates();
