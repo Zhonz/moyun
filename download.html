@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>墨韵 AI - 下载中心</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Noto Serif SC', 'Segoe UI', system-ui, sans-serif;
+      background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
+      color: #f0e6d3;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 40px 20px;
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    
+    .header h1 {
+      font-size: 2.5rem;
+      color: #d4af37;
+      margin-bottom: 10px;
+      text-shadow: 0 2px 10px rgba(212, 175, 55, 0.3);
+    }
+    
+    .header p {
+      font-size: 1.1rem;
+      color: #9e9e9e;
+    }
+    
+    .download-card {
+      background: linear-gradient(145deg, #1a1a1a, #0f0f0f);
+      border: 1px solid rgba(212, 175, 55, 0.2);
+      border-radius: 16px;
+      padding: 30px;
+      margin-bottom: 24px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      transition: all 0.3s ease;
+    }
+    
+    .download-card:hover {
+      border-color: rgba(212, 175, 55, 0.5);
+      transform: translateY(-4px);
+      box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5);
+    }
+    
+    .download-card h2 {
+      color: #d4af37;
+      font-size: 1.6rem;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .download-card h2 span {
+      font-size: 2rem;
+    }
+    
+    .description {
+      color: #9e9e9e;
+      margin-bottom: 20px;
+      line-height: 1.7;
+    }
+    
+    .btn-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    
+    .download-btn {
+      background: linear-gradient(135deg, #d4af37 0%, #b8931c 100%);
+      color: #0f0f0f;
+      border: none;
+      padding: 14px 28px;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.3s ease;
+      text-decoration: none;
+    }
+    
+    .download-btn:hover {
+      background: linear-gradient(135deg, #e8c547 0%, #c79a23 100%);
+      transform: scale(1.03);
+      box-shadow: 0 6px 20px rgba(212, 175, 55, 0.4);
+    }
+    
+    .download-btn.secondary {
+      background: rgba(212, 175, 55, 0.1);
+      color: #d4af37;
+      border: 1px solid rgba(212, 175, 55, 0.3);
+    }
+    
+    .download-btn.secondary:hover {
+      background: rgba(212, 175, 55, 0.2);
+    }
+    
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .info-item {
+      background: rgba(255, 255, 255, 0.03);
+      padding: 12px 16px;
+      border-radius: 8px;
+    }
+    
+    .info-item label {
+      display: block;
+      font-size: 0.85rem;
+      color: #6e6e6e;
+      margin-bottom: 4px;
+    }
+    
+    .info-item value {
+      font-size: 1rem;
+      color: #f0e6d3;
+    }
+    
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: #d4af37;
+      text-decoration: none;
+      margin-bottom: 30px;
+      font-size: 1rem;
+      transition: color 0.3s;
+    }
+    
+    .back-link:hover {
+      color: #e8c547;
+    }
+    
+    .badge {
+      display: inline-block;
+      background: rgba(76, 175, 80, 0.2);
+      color: #4caf50;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      margin-left: 12px;
+      border: 1px solid rgba(76, 175, 80, 0.3);
+    }
+    
+    @media (max-width: 768px) {
+      .header h1 {
+        font-size: 2rem;
+      }
+      
+      .download-card {
+        padding: 20px;
+      }
+      
+      .btn-group {
+        flex-direction: column;
+      }
+      
+      .download-btn {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="index.html" class="back-link">← 返回应用</a>
+    
+    <div class="header">
+      <h1>📥 墨韵 AI 下载中心</h1>
+      <p>下载墨韵 AI 应用，随时随地享受 AI 创作的乐趣</p>
+    </div>
+    
+    <div class="download-card">
+      <h2><span>🌐</span> Web 版本 <span class="badge">已就绪</span></h2>
+      <p class="description">
+        无需安装，直接在浏览器中使用。支持所有现代浏览器，包括 Chrome、Firefox、Safari 和 Edge。
+      </p>
+      <div class="btn-group">
+        <a href="index.html" class="download-btn">
+          🚀 打开应用
+        </a>
+        <a href="dist/" class="download-btn secondary">
+          📁 查看构建文件
+        </a>
+      </div>
+      <div class="info-grid">
+        <div class="info-item">
+          <label>版本</label>
+          <value>1.0.0</value>
+        </div>
+        <div class="info-item">
+          <label>更新时间</label>
+          <value id="web-update-time">2026-05-30</value>
+        </div>
+        <div class="info-item">
+          <label>大小</label>
+          <value id="web-size">~ 500 KB</value>
+        </div>
+        <div class="info-item">
+          <label>兼容性</label>
+          <value>Chrome 90+, Firefox 88+, Safari 14+</value>
+        </div>
+      </div>
+    </div>
+    
+    <div class="download-card">
+      <h2><span>📱</span> Android APK 版本</h2>
+      <p class="description">
+        专为 Android 设备优化的原生应用，支持离线访问和推送通知。
+      </p>
+      <div class="btn-group">
+        <button id="apk-download" class="download-btn secondary">
+          📦 下载 APK
+        </button>
+        <a href="Build-APK.ps1" class="download-btn secondary" download>
+          🔧 Windows 构建脚本
+        </a>
+        <a href="build-apk.sh" class="download-btn secondary" download>
+          🔧 Linux/macOS 构建脚本
+        </a>
+      </div>
+      <div class="info-grid">
+        <div class="info-item">
+          <label>最低 Android 版本</label>
+          <value>Android 8.0 (API 26)</value>
+        </div>
+        <div class="info-item">
+          <label>架构</label>
+          <value>arm64-v8a, armeabi-v7a</value>
+        </div>
+        <div class="info-item">
+          <label>状态</label>
+          <value id="apk-status">待构建</value>
+        </div>
+      </div>
+    </div>
+    
+    <div class="download-card">
+      <h2><span>📦</span> 源代码</h2>
+      <p class="description">
+        查看完整的源代码，了解墨韵 AI 的实现细节，或为项目贡献代码。
+      </p>
+      <div class="btn-group">
+        <a href="src/main.js" class="download-btn secondary" download>
+          📄 查看主程序
+        </a>
+        <a href="src/styles.css" class="download-btn secondary" download>
+          🎨 查看样式文件
+        </a>
+        <a href="index.html" class="download-btn secondary" download>
+          📄 查看 HTML 结构
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // 设置更新时间
+      const now = new Date();
+      document.getElementById('web-update-time').textContent = 
+        `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      
+      // APK 下载按钮提示
+      document.getElementById('apk-download').addEventListener('click', () => {
+        alert('APK 文件尚未构建。\n\n请运行以下命令构建 APK：\n1. npm run build\n2. npx cap sync android\n3. cd android && ./gradlew assembleDebug\n\n或使用项目根目录下的构建脚本。');
+      });
+      
+      // 尝试检查 APK 是否存在
+      fetch('android/app/build/outputs/apk/debug/app-debug.apk')
+        .then(response => {
+          if (response.ok) {
+            const btn = document.getElementById('apk-download');
+            btn.textContent = '📦 下载 APK';
+            btn.classList.remove('secondary');
+            btn.onclick = () => {
+              window.location.href = 'android/app/build/outputs/apk/debug/app-debug.apk';
+            };
+            document.getElementById('apk-status').textContent = '可用';
+          }
+        })
+        .catch(() => {
+          // 文件不存在，保持原样
+        });
+    });
+  </script>
+</body>
+</html>

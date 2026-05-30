@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>墨韵 AI - 快速使用指南</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #e0e0e0;
+            line-height: 1.8;
+            padding: 40px 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: #d4af37;
+            text-align: center;
+            margin-bottom: 40px;
+            font-size: 2.5rem;
+            text-shadow: 0 2px 10px rgba(212, 175, 55, 0.3);
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(212, 175, 55, 0.2);
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 24px;
+            backdrop-filter: blur(10px);
+        }
+
+        .card h2 {
+            color: #d4af37;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card h2 .emoji {
+            font-size: 2rem;
+        }
+
+        .step {
+            background: rgba(212, 175, 55, 0.1);
+            border-left: 4px solid #d4af37;
+            padding: 15px 20px;
+            margin: 15px 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .step strong {
+            color: #d4af37;
+        }
+
+        .success {
+            background: rgba(76, 175, 80, 0.15);
+            border: 1px solid #4caf50;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        .success h3 {
+            color: #4caf50;
+            margin-bottom: 10px;
+        }
+
+        .warning {
+            background: rgba(255, 193, 7, 0.15);
+            border: 1px solid #ffc107;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        .warning h3 {
+            color: #ffc107;
+            margin-bottom: 10px;
+        }
+
+        code {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-family: 'Consolas', monospace;
+            color: #d4af37;
+        }
+
+        .file-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .file-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .file-item .name {
+            color: #d4af37;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .file-item .desc {
+            font-size: 0.9rem;
+            color: #888;
+        }
+
+        .btn {
+            display: inline-block;
+            background: linear-gradient(135deg, #d4af37 0%, #b8931c 100%);
+            color: #1a1a2e;
+            padding: 12px 30px;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: bold;
+            margin: 10px 5px;
+            transition: all 0.3s;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(212, 175, 55, 0.4);
+        }
+
+        .btn.secondary {
+            background: rgba(212, 175, 55, 0.2);
+            color: #d4af37;
+            border: 1px solid rgba(212, 175, 55, 0.3);
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.8rem;
+            }
+            .container {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 墨韵 AI - 快速使用指南</h1>
+
+        <div class="warning">
+            <h3>⚠️ 关于预览错误的说明</h3>
+            <p>您看到的 React 错误是 Trae 预览环境的问题，与墨韵 AI 项目完全无关！</p>
+            <p>墨韵 AI 是纯 HTML/JS/CSS 项目，不使用 React，可以直接使用。</p>
+        </div>
+
+        <div class="card">
+            <h2><span class="emoji">🚀</span>方法一：直接打开（最推荐）</h2>
+            <div class="step">
+                <strong>第 1 步：</strong>找到项目文件夹
+                <br>位置：<code>/workspace/inkverse-app/</code>
+            </div>
+            <div class="step">
+                <strong>第 2 步：</strong>进入 <code>dist/</code> 文件夹
+            </div>
+            <div class="step">
+                <strong>第 3 步：</strong>双击文件打开
+                <br>
+                <br>
+                <button class="btn" onclick="alert('请在文件管理器中找到 dist/index.html 并双击打开')">📖 打开主应用</button>
+                <button class="btn secondary" onclick="alert('请在文件管理器中找到 dist/download.html 并双击打开')">📥 打开下载中心</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2><span class="emoji">📁</span>项目文件说明</h2>
+            <div class="file-list">
+                <div class="file-item">
+                    <div class="name">dist/index.html</div>
+                    <div class="desc">✅ 墨韵 AI 主应用（推荐使用）</div>
+                </div>
+                <div class="file-item">
+                    <div class="name">dist/download.html</div>
+                    <div class="desc">📥 下载中心页面</div>
+                </div>
+                <div class="file-item">
+                    <div class="name">src/main.js</div>
+                    <div class="desc">📄 源代码（开发用）</div>
+                </div>
+                <div class="file-item">
+                    <div class="name">start.bat / start.sh</div>
+                    <div class="desc">🎯 快速启动脚本</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2><span class="emoji">✨</span>已实现的功能</h2>
+            <ul style="list-style: none; padding: 0;">
+                <li style="padding: 8px 0;">✅ 从 API 自动获取最新模型列表</li>
+                <li style="padding: 8px 0;">✅ 手动添加/删除模型</li>
+                <li style="padding: 8px 0;">✅ 模型数据持久化存储</li>
+                <li style="padding: 8px 0;">✅ AI 创作模式</li>
+                <li style="padding: 8px 0;">✅ 对话模式</li>
+                <li style="padding: 8px 0;">✅ 深色/浅色主题</li>
+                <li style="padding: 8px 0;">✅ 历史记录管理</li>
+            </ul>
+        </div>
+
+        <div class="success">
+            <h3>🎊 项目状态</h3>
+            <p>✅ 构建完成！所有功能正常可用</p>
+            <p>📅 构建时间：2026-05-30</p>
+            <p>📦 构建输出：dist/ 文件夹</p>
+        </div>
+
+        <div class="card">
+            <h2><span class="emoji">💡</span>小提示</h2>
+            <p>如果需要开发或修改代码：</p>
+            <ol style="margin-left: 20px;">
+                <li>编辑 <code>src/</code> 文件夹中的源文件</li>
+                <li>运行 <code>npm run build</code> 重新构建</li>
+                <li>重新打开 <code>dist/index.html</code></li>
+            </ol>
+        </div>
+
+        <div style="text-align: center; margin-top: 40px;">
+            <p style="color: #888;">祝您使用愉快！🎉</p>
+        </div>
+    </div>
+
+    <script>
+        // 这个页面不需要任何复杂逻辑
+        console.log('墨韵 AI 使用指南已加载');
+    </script>
+</body>
+</html>
