@@ -36,7 +36,7 @@ jobs:
     - name: Set up Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '22'
+        node-version: '24'
         cache: 'npm'
     
     - name: Install dependencies
@@ -51,11 +51,16 @@ jobs:
     - name: Sync Capacitor
       run: npx cap sync android
     
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v4
+      with:
+        gradle-version: wrapper
+    
     - name: Build with Gradle (Debug)
       run: |
         cd android
         echo "Starting Gradle build..."
-        ./gradlew assembleDebug --stacktrace --no-daemon --info
+        ./gradlew assembleDebug --stacktrace --no-daemon --no-parallel
         echo "✅ Gradle build completed!"
         ls -la app/build/outputs/apk/debug/
     
@@ -80,6 +85,7 @@ jobs:
           - 优化用户体验
           - 修复 Gradle 构建配置
           - 增加默认模型列表
+          - 优化 GitHub Actions 构建流程
         generate_release_notes: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
