@@ -19,7 +19,7 @@ const AI_PROVIDERS = {
     },
     deepseek: {
         name: "DeepSeek",
-        models: ["deepseek-chat", "deepseek-reasoner"],
+        models: ["deepseek-v4-pro", "deepseek-v4-flash"],
         endpoint: "https://api.deepseek.com/v1/chat/completions",
         modelsEndpoint: "https://api.deepseek.com/v1/models",
         requiresAuth: true,

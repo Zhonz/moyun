@@ -1,6 +1,6 @@
 {
   "name": "inkverse-app",
-  "version": "1.7.0",
+  "version": "1.8.0",
   "description": "墨韵 AI - 智能文学创作与阅读应用",
   "type": "module",
   "scripts": {
