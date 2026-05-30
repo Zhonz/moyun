@@ -21,3 +21,8 @@ Capacitor.config.ts
 android/
 ios/
 *.xcuserstate
+*.apk
+*.aab
+*.ap_
+*.apks
+*.dex
