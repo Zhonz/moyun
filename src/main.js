@@ -245,6 +245,7 @@ class InkverseApp {
             conversationHistory: [],
             theme: 'dark',
             searchQuery: '',
+            templateSearchQuery: '',
             showFavoritesOnly: false,
             stats: {
                 totalCreations: 0,
@@ -356,6 +357,20 @@ class InkverseApp {
         if (this.state.customTemplates.length > 0 && this.state.currentCategory === 'novels') {
             templates = [...templates, ...this.state.customTemplates];
         }
+        
+        // 搜索过滤
+        if (this.state.templateSearchQuery && this.state.templateSearchQuery.trim()) {
+            const query = this.state.templateSearchQuery.toLowerCase();
+            templates = templates.filter(t => 
+                t.name.toLowerCase().includes(query) || 
+                t.example.toLowerCase().includes(query)
+            );
+        }
+        
+        if (templates.length === 0) {
+            container.innerHTML = '<div class="empty-state">没有找到匹配的模板</div>';
+            return;
+        }
 
         container.innerHTML = templates.map(t => `
             <div class="template-card ${this.state.currentTemplate?.id === t.id ? 'selected' : ''}" data-id="${t.id}">
@@ -371,10 +386,15 @@ class InkverseApp {
 
         container.querySelectorAll('.template-card').forEach(card => {
             card.addEventListener('click', () => {
-                const allTemplates = this.state.currentCategory === 'novels' 
-                    ? [...CREATIVE_TEMPLATES.novels.templates, ...this.state.customTemplates]
-                    : CREATIVE_TEMPLATES[this.state.currentCategory].templates;
-                const template = allTemplates.find(t => t.id === card.dataset.id);
+                let allTemplates;
+                if (this.state.currentCategory === 'novels') {
+                    allTemplates = [...CREATIVE_TEMPLATES.novels.templates, ...this.state.customTemplates];
+                } else {
+                    allTemplates = CREATIVE_TEMPLATES[this.state.currentCategory].templates;
+                }
+                // 如果有搜索，我们需要在所有模板中查找，不仅仅是过滤后的列表
+                const searchTemplates = this.searchAllTemplates();
+                const template = searchTemplates.find(t => t.id === card.dataset.id);
                 if (template) {
                     this.selectTemplate(template);
                 }
@@ -387,6 +407,17 @@ class InkverseApp {
                 this.toggleFavorite(btn.dataset.favId);
             });
         });
+    }
+    
+    searchAllTemplates() {
+        const allTemplates = [];
+        Object.values(CREATIVE_TEMPLATES).forEach(cat => {
+            allTemplates.push(...cat.templates);
+        });
+        if (this.state.customTemplates.length > 0) {
+            allTemplates.push(...this.state.customTemplates);
+        }
+        return allTemplates;
     }
 
     isFavorite(templateId) {
@@ -953,6 +984,11 @@ class InkverseApp {
         document.getElementById('search-input')?.addEventListener('input', (e) => {
             this.state.searchQuery = e.target.value;
             this.renderHistory();
+        });
+        
+        document.getElementById('templates-search')?.addEventListener('input', (e) => {
+            this.state.templateSearchQuery = e.target.value;
+            this.renderTemplates();
         });
 
         document.getElementById('batch-export-btn')?.addEventListener('click', () => {
