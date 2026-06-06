@@ -69,7 +69,13 @@ jobs:
         
         # Make gradlew executable and run build
         chmod +x gradlew
-        ./gradlew assembleDebug --no-daemon --warning-mode=all 2>&1 | head -100
+        ./gradlew assembleDebug --no-daemon
+    
+    - name: Check APK output
+      run: |
+        echo "=== APK Output Directory ==="
+        ls -la android/app/build/outputs/apk/debug/ 2>/dev/null || echo "APK directory not found"
+        find . -name "*.apk" -type f 2>/dev/null || echo "No APK files found"
     
     - name: Upload APK
       uses: actions/upload-artifact@v4
