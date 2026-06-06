@@ -11,6 +11,8 @@ class InkverseApp {
         this.state = stateManager.getState();
         this.templateManager = new TemplateManager(stateManager);
         this.historyManager = new HistoryManager(stateManager);
+        this._historyCurrentPage = 0;
+        this._lastHistorySearchQuery = '';
         
         this.loadState();
         this.initUI();
@@ -98,23 +100,25 @@ class InkverseApp {
             </div>
         `).join('');
 
-        container.querySelectorAll('.template-card').forEach(card => {
-            card.addEventListener('click', () => {
-                const template = this.templateManager.findTemplateById(card.dataset.id);
+        // 事件委托：模板卡片点击和收藏按钮
+        container.onclick = (e) => {
+            const favoriteBtn = e.target.closest('.favorite-btn');
+            if (favoriteBtn) {
+                e.stopPropagation();
+                const isFavorited = this.templateManager.toggleFavorite(favoriteBtn.dataset.favId);
+                this.showToast(isFavorited ? '已收藏' : '已取消收藏');
+                this.renderTemplates();
+                return;
+            }
+
+            const templateCard = e.target.closest('.template-card');
+            if (templateCard) {
+                const template = this.templateManager.findTemplateById(templateCard.dataset.id);
                 if (template) {
                     this.selectTemplate(template);
                 }
-            });
-        });
-
-        container.querySelectorAll('.favorite-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const isFavorited = this.templateManager.toggleFavorite(btn.dataset.favId);
-                this.showToast(isFavorited ? '已收藏' : '已取消收藏');
-                this.renderTemplates();
-            });
-        });
+            }
+        };
     }
 
     selectTemplate(template) {
@@ -180,71 +184,94 @@ class InkverseApp {
             return;
         }
 
-        container.innerHTML = filteredHistory.slice().reverse().map((item, index) => `
-            <div class="history-item" data-index="${index}">
+        // 重置虚拟滚动索引（当搜索查询改变时）
+        if (this.state.searchQuery !== this._lastHistorySearchQuery) {
+            this.historyManager.resetVirtualScroll();
+            this._historyCurrentPage = 0;
+            this._lastHistorySearchQuery = this.state.searchQuery;
+        }
+
+        // 使用虚拟滚动获取当前页数据
+        const pageData = this.historyManager.getVirtualScrollPage(this._historyCurrentPage || 0, 20);
+        const { items, hasMore, total } = pageData;
+
+        if (items.length === 0) {
+            container.innerHTML = '<div class="empty-state">暂无创作记录</div>';
+            return;
+        }
+
+        container.innerHTML = items.map((item, index) => `
+            <div class="history-item" data-index="${index}" data-actual-index="${this.state.history.length - 1 - (this._historyCurrentPage * 20 + index)}">
                 <div class="history-header">
                     <span class="history-title">${item.templateName || '创作'} · ${formatDate(item.timestamp)}</span>
-                    <button class="delete-history-btn" data-delete-id="${index}" title="删除">🗑️</button>
+                    <button class="delete-history-btn" data-delete-index="${this._historyCurrentPage * 20 + index}" title="删除">🗑️</button>
                 </div>
                 <div class="history-preview">${truncateText(item.prompt, 80)}...</div>
                 <div class="history-actions">
-                    <button class="history-action-btn" data-copy-id="${index}">📋 复制</button>
-                    <button class="history-action-btn" data-share-id="${index}">🔗 分享</button>
-                    <button class="history-action-btn" data-regenerate-id="${index}">🔄 重新生成</button>
+                    <button class="history-action-btn" data-action="copy" data-action-index="${this._historyCurrentPage * 20 + index}">📋 复制</button>
+                    <button class="history-action-btn" data-action="share" data-action-index="${this._historyCurrentPage * 20 + index}">🔗 分享</button>
+                    <button class="history-action-btn" data-action="regenerate" data-action-index="${this._historyCurrentPage * 20 + index}">🔄 重新生成</button>
                 </div>
             </div>
         `).join('');
 
-        container.querySelectorAll('.history-item').forEach(item => {
-            item.addEventListener('click', (e) => {
-                if (!e.target.closest('.delete-history-btn') && !e.target.closest('.history-action-btn')) {
-                    const historyIndex = parseInt(item.dataset.index);
-                    const historyItem = this.state.history[this.state.history.length - 1 - historyIndex];
-                    if (historyItem) {
-                        this.displayResult(historyItem.result, '历史作品');
-                    }
-                }
-            });
-        });
+        // 添加加载更多按钮
+        if (hasMore) {
+            container.innerHTML += `
+                <button class="load-more-btn" id="load-more-history">
+                    加载更多 (${total - (this._historyCurrentPage + 1) * 20} 条剩余)
+                </button>
+            `;
+        }
 
-        container.querySelectorAll('.delete-history-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
+        // 事件委托：处理所有历史记录操作
+        container.onclick = (e) => {
+            const deleteBtn = e.target.closest('.delete-history-btn');
+            if (deleteBtn) {
                 e.stopPropagation();
-                const index = parseInt(btn.dataset.deleteId);
-                const actualIndex = this.state.history.length - 1 - index;
+                const actualIndex = parseInt(deleteBtn.dataset.deleteIndex);
                 this.historyManager.deleteHistoryItem(actualIndex);
                 this.state.history = this.historyManager.getHistory();
                 this.renderHistory();
                 this.showToast('已删除');
-            });
-        });
+                return;
+            }
 
-        container.querySelectorAll('.history-action-btn').forEach(btn => {
-            if (btn.dataset.copyId !== undefined) {
-                btn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const index = parseInt(btn.dataset.copyId);
-                    const historyItem = this.state.history[this.state.history.length - 1 - index];
+            const actionBtn = e.target.closest('.history-action-btn');
+            if (actionBtn) {
+                e.stopPropagation();
+                const action = actionBtn.dataset.action;
+                const actualIndex = parseInt(actionBtn.dataset.actionIndex);
+                const historyItem = this.state.history[actualIndex];
+
+                if (action === 'copy') {
                     navigator.clipboard.writeText(historyItem.result);
                     this.showToast('已复制到剪贴板！');
-                });
-            } else if (btn.dataset.shareId !== undefined) {
-                btn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const index = parseInt(btn.dataset.shareId);
-                    const historyItem = this.state.history[this.state.history.length - 1 - index];
+                } else if (action === 'share') {
                     this.shareResult(historyItem.result);
-                });
-            } else if (btn.dataset.regenerateId !== undefined) {
-                btn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const index = parseInt(btn.dataset.regenerateId);
-                    const historyItem = this.state.history[this.state.history.length - 1 - index];
+                } else if (action === 'regenerate') {
                     document.getElementById('prompt-input').value = historyItem.prompt;
                     this.generate();
-                });
+                }
+                return;
             }
-        });
+
+            const loadMoreBtn = e.target.closest('.load-more-btn');
+            if (loadMoreBtn) {
+                this._historyCurrentPage++;
+                this.renderHistory();
+                return;
+            }
+
+            const historyItem = e.target.closest('.history-item');
+            if (historyItem && !e.target.closest('.history-action-btn') && !e.target.closest('.delete-history-btn')) {
+                const actualIndex = parseInt(historyItem.dataset.actualIndex);
+                const item = this.state.history[actualIndex];
+                if (item) {
+                    this.displayResult(item.result, '历史作品');
+                }
+            }
+        };
     }
 
     switchMode(mode) {
