@@ -3,29 +3,85 @@ apply plugin: 'com.android.application'
 android {
     namespace = "com.inkverse.app"
     compileSdk = rootProject.ext.compileSdkVersion
+
     defaultConfig {
         applicationId "com.inkverse.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
-        versionName "1.0"
+        versionName "2.1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
         aaptOptions {
-             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
-             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
+            // Files and dirs to omit from the packaged assets dir
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
+
+        // 启用矢量图支持
+        vectorDrawables.useSupportLibrary = true
     }
+
+    // APK 大小优化配置
+    buildFeatures {
+        // 禁用不必要的构建特性
+        buildConfig = false
+        // WebView 优化
+        webViewWebContentsDebuggingEnabled = false
+    }
+
     buildTypes {
         release {
+            // 启用代码压缩和混淆
+            minifyEnabled true
+            shrinkResources true
+            // 启用 R8 完整模式
+            shrinkResources true
+
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+
+            // 禁用日志输出
+            buildConfigField "boolean", "DEBUG_MODE", "false"
+
+            // APK 输出配置
+            applicationVariants.all { variant ->
+                variant.outputs.all { output ->
+                    def versionCodeSuffix = variant.versionName.replace('.', '_')
+                    def abiFilter = output.getFilter("ABI")
+                    if (abiFilter != null) {
+                        output.outputFileName = "inkverse-${variant.versionName}-${abiFilter}.apk"
+                    } else {
+                        output.outputFileName = "inkverse-${variant.versionName}.apk"
+                    }
+                }
+            }
+        }
+        debug {
             minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            debuggable true
+        }
+    }
+
+    // DEX 编译优化
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_21
+        targetCompatibility JavaVersion.VERSION_21
+        // 启用 R8 增量编译
+        incremental = true
+    }
+
+    // 过滤未使用的资源
+    lint {
+        abortOnError false
+        checkReleaseBuilds false
+        // 移除无用的资源
+        unusedResources {
+            enforceWarnings = false
         }
     }
 }
 
 repositories {
-    flatDir{
+    flatDir {
         dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
     }
 }
