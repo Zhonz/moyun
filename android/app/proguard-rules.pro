@@ -1,47 +1,21 @@
-# 墨韵AI ProGuard 优化规则
+# Add project specific ProGuard rules here.
+# You can control the set of applied configuration files using the
+# proguardFiles setting in build.gradle.
+#
+# For more details, see
+#   http://developer.android.com/guide/developing/tools/proguard.html
 
-# 保持 Capacitor 核心类
--keep class com.getcapacitor.** { *; }
--keep class com.inkverse.app.** { *; }
+# If your project uses WebView with JS, uncomment the following
+# and specify the fully qualified class name to the JavaScript interface
+# class:
+#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
+#   public *;
+#}
 
-# WebView 优化
--keepclassmembers class * {
-    @android.webkit.JavascriptInterface <methods>;
-}
+# Uncomment this to preserve the line number information for
+# debugging stack traces.
+#-keepattributes SourceFile,LineNumberTable
 
-# 保持 AndroidX 类
--keep class androidx.** { *; }
--keep interface androidx.** { *; }
-
-# 移除日志
--assumenosideeffects class android.util.Log {
-    public static *** d(...);
-    public static *** v(...);
-    public static *** i(...);
-}
-
-# 优化 JavaScript 交互
--keepclassmembers class * {
-    @android.webkit.JavascriptInterface <methods>;
-}
-
-# 保持原生方法
--keepclasseswithmembernames class * {
-    native <methods>;
-}
-
-# 保持枚举
--keepclassmembers enum * {
-    public static **[] values();
-    public static ** valueOf(java.lang.String);
-}
-
-# 保持 Parcelable
--keepclassmembers class * implements android.os.Parcelable {
-    public static final android.os.Parcelable$Creator CREATOR;
-}
-
-# 资源压缩
--repackageclasses ''
--allowaccessmodification
--optimizations !code/simplification/arithmetic,!code/simplification/cast,!field/*,!class/merging/*
+# If you keep the line number information, uncomment this to
+# hide the original source file name.
+#-renamesourcefileattribute SourceFile
