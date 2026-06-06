@@ -474,17 +474,19 @@ class InkverseApp {
         
         try {
             infoEl.textContent = '正在获取模型列表...';
+            const apiKey = stateManager.getApiKey();
+            const customEndpoint = stateManager.getCustomEndpoint();
             
             let modelsEndpoint = providerConfig.modelsEndpoint;
-            if (provider === 'custom' && this.state.customEndpoint) {
-                const baseUrl = this.state.customEndpoint.replace(/\/chat\/completions$/, '');
+            if (provider === 'custom' && customEndpoint) {
+                const baseUrl = customEndpoint.replace(/\/chat\/completions$/, '');
                 modelsEndpoint = `${baseUrl}/models`;
             }
             
             const response = await apiHandler.callWithRetry(modelsEndpoint, {
                 method: 'GET',
                 headers: {
-                    'Authorization': `Bearer ${this.state.apiKey}`,
+                    'Authorization': `Bearer ${apiKey}`,
                     'Content-Type': 'application/json'
                 }
             }, 3);
@@ -678,14 +680,22 @@ class InkverseApp {
         document.getElementById('add-template-btn')?.addEventListener('click', () => this.addCustomTemplate());
         
         document.getElementById('provider-select')?.addEventListener('change', (e) => {
-            stateManager.set('provider', e.target.value);
+            const newProvider = e.target.value;
+            stateManager.set('provider', newProvider);
             stateManager.set('model', '');
-            this.state.provider = e.target.value;
+            this.state.provider = newProvider;
             this.state.model = '';
+            
+            // 加载新provider的API密钥和端点
+            const newApiKey = stateManager.getApiKey(newProvider);
+            const newEndpoint = stateManager.getCustomEndpoint(newProvider);
+            document.getElementById('api-key').value = newApiKey;
+            document.getElementById('custom-endpoint').value = newEndpoint;
+            
             this.updateModelOptions();
             this.renderCurrentModelsList();
             
-            if (this.state.apiKey) {
+            if (newApiKey) {
                 setTimeout(() => {
                     this.fetchModelsFromAPI();
                 }, 500);
@@ -1032,14 +1042,16 @@ class InkverseApp {
     }
 
     async callOpenAIStreaming(messages, providerConfig, onChunk) {
+        const apiKey = stateManager.getApiKey();
+        const customEndpoint = stateManager.getCustomEndpoint();
         const endpoint = this.state.provider === 'custom' ? 
-            this.state.customEndpoint : providerConfig.endpoint;
+            customEndpoint : providerConfig.endpoint;
         
         const response = await apiHandler.fetchWithTimeout(endpoint, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${this.state.apiKey}`
+                'Authorization': `Bearer ${apiKey}`
             },
             body: JSON.stringify({
                 model: this.state.model,
@@ -1086,6 +1098,7 @@ class InkverseApp {
     }
 
     async callAnthropicStreaming(messages, providerConfig, onChunk) {
+        const apiKey = stateManager.getApiKey();
         const systemMessage = messages.find(m => m.role === 'system');
         const otherMessages = messages.filter(m => m.role !== 'system').map(m => ({
             role: m.role,
@@ -1096,7 +1109,7 @@ class InkverseApp {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'x-api-key': this.state.apiKey,
+                'x-api-key': apiKey,
                 'anthropic-version': '2023-06-01',
                 'anthropic-dangerous-direct-browser-access': 'true'
             },
@@ -1171,14 +1184,16 @@ class InkverseApp {
     }
 
     async callOpenAICompatible(messages, providerConfig) {
+        const apiKey = stateManager.getApiKey();
+        const customEndpoint = stateManager.getCustomEndpoint();
         const endpoint = this.state.provider === 'custom' ? 
-            this.state.customEndpoint : providerConfig.endpoint;
+            customEndpoint : providerConfig.endpoint;
         
         const response = await apiHandler.callWithRetry(endpoint, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${this.state.apiKey}`
+                'Authorization': `Bearer ${apiKey}`
             },
             body: JSON.stringify({
                 model: this.state.model,
@@ -1197,6 +1212,7 @@ class InkverseApp {
     }
 
     async callAnthropic(messages, providerConfig) {
+        const apiKey = stateManager.getApiKey();
         const systemMessage = messages.find(m => m.role === 'system');
         const otherMessages = messages.filter(m => m.role !== 'system').map(m => ({
             role: m.role,
@@ -1207,7 +1223,7 @@ class InkverseApp {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'x-api-key': this.state.apiKey,
+                'x-api-key': apiKey,
                 'anthropic-version': '2023-06-01'
             },
             body: JSON.stringify({
@@ -1253,8 +1269,11 @@ class InkverseApp {
         panel?.classList.toggle('open');
         
         if (panel?.classList.contains('open')) {
-            document.getElementById('api-key').value = this.state.apiKey;
-            document.getElementById('custom-endpoint').value = this.state.customEndpoint;
+            // 获取当前provider的API密钥和端点
+            const currentApiKey = stateManager.getApiKey();
+            const currentEndpoint = stateManager.getCustomEndpoint();
+            document.getElementById('api-key').value = currentApiKey;
+            document.getElementById('custom-endpoint').value = currentEndpoint;
             document.getElementById('provider-select').value = this.state.provider;
             this.updateModelOptions();
             document.getElementById('model-select').value = this.state.model;
@@ -1283,15 +1302,18 @@ class InkverseApp {
             }
         }
         
-        stateManager.set('apiKey', apiKey);
-        stateManager.set('customEndpoint', customEndpoint);
+        // 保存到对应的provider
+        stateManager.setApiKey(apiKey, provider);
+        stateManager.setCustomEndpoint(customEndpoint, provider);
         stateManager.set('provider', provider);
         stateManager.set('model', model);
         
-        this.state.apiKey = apiKey;
-        this.state.customEndpoint = customEndpoint;
+        this.state.apiKeys = stateManager.state.apiKeys;
+        this.state.customEndpoints = stateManager.state.customEndpoints;
         this.state.provider = provider;
         this.state.model = model;
+        this.state.apiKey = apiKey;
+        this.state.customEndpoint = customEndpoint;
         
         this.saveState();
         this.toggleSettings();

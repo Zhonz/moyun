@@ -100,8 +100,8 @@ class StateManager {
             creativity: 0.7,
             provider: 'deepseek',
             model: '',
-            apiKey: '',
-            customEndpoint: '',
+            apiKeys: {}, // 每个provider对应的API密钥
+            customEndpoints: {}, // 每个provider对应的自定义端点
             history: [],
             favorites: [],
             customTemplates: [],
@@ -128,6 +128,40 @@ class StateManager {
     }
 
     /**
+     * 获取当前provider的API密钥
+     */
+    getApiKey(provider = null) {
+        const p = provider || this.state.provider;
+        return this.state.apiKeys[p] || '';
+    }
+
+    /**
+     * 设置当前或指定provider的API密钥
+     */
+    setApiKey(apiKey, provider = null) {
+        const p = provider || this.state.provider;
+        const apiKeys = { ...this.state.apiKeys, [p]: apiKey };
+        this.state.apiKeys = apiKeys;
+    }
+
+    /**
+     * 获取当前provider的自定义端点
+     */
+    getCustomEndpoint(provider = null) {
+        const p = provider || this.state.provider;
+        return this.state.customEndpoints[p] || '';
+    }
+
+    /**
+     * 设置当前或指定provider的自定义端点
+     */
+    setCustomEndpoint(endpoint, provider = null) {
+        const p = provider || this.state.provider;
+        const customEndpoints = { ...this.state.customEndpoints, [p]: endpoint };
+        this.state.customEndpoints = customEndpoints;
+    }
+
+    /**
      * 加载保存的状态
      * 优先从 IndexedDB 加载，支持热更新
      */
@@ -145,13 +179,20 @@ class StateManager {
                     ...this.getDefaultState(),
                     provider: persistentData.provider || this.state.provider,
                     model: persistentData.model || this.state.model,
-                    apiKey: persistentData.apiKey || this.state.apiKey,
-                    customEndpoint: persistentData.customEndpoint || this.state.customEndpoint,
+                    apiKeys: persistentData.apiKeys || this.state.apiKeys,
+                    customEndpoints: persistentData.customEndpoints || this.state.customEndpoints,
                     theme: persistentData.theme || this.state.theme,
                     cachedModels: persistentData.cachedModels || this.state.cachedModels,
                     favorites: persistentData.favorites || [],
                     customTemplates: persistentData.customTemplates || []
                 };
+                // 兼容旧版本的单个apiKey
+                if (persistentData.apiKey && !this.state.apiKeys[this.state.provider]) {
+                    this.state.apiKeys[this.state.provider] = persistentData.apiKey;
+                }
+                if (persistentData.customEndpoint && !this.state.customEndpoints[this.state.provider]) {
+                    this.state.customEndpoints[this.state.provider] = persistentData.customEndpoint;
+                }
                 this.ensureDefaultModels();
                 this.isLoaded = true;
                 return this.state;
@@ -205,8 +246,8 @@ class StateManager {
                 await persistentStorage.setItems({
                     provider: this.state.provider,
                     model: this.state.model,
-                    apiKey: this.state.apiKey,
-                    customEndpoint: this.state.customEndpoint,
+                    apiKeys: this.state.apiKeys,
+                    customEndpoints: this.state.customEndpoints,
                     theme: this.state.theme,
                     cachedModels: this.state.cachedModels,
                     favorites: this.state.favorites,
@@ -221,8 +262,8 @@ class StateManager {
         const toSave = {
             provider: this.state.provider,
             model: this.state.model,
-            apiKey: this.state.apiKey,
-            customEndpoint: this.state.customEndpoint,
+            apiKeys: this.state.apiKeys,
+            customEndpoints: this.state.customEndpoints,
             history: this.state.history.slice(-MAX_HISTORY_ITEMS),
             favorites: this.state.favorites,
             customTemplates: this.state.customTemplates,
@@ -240,8 +281,8 @@ class StateManager {
             await persistentStorage.setItems({
                 provider: this.state.provider,
                 model: this.state.model,
-                apiKey: this.state.apiKey,
-                customEndpoint: this.state.customEndpoint,
+                apiKeys: this.state.apiKeys,
+                customEndpoints: this.state.customEndpoints,
                 theme: this.state.theme,
                 cachedModels: this.state.cachedModels,
                 favorites: this.state.favorites,
