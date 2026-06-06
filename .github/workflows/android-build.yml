@@ -42,6 +42,33 @@ jobs:
     - name: Install dependencies
       run: npm install
     
+    - name: Auto-increment version
+      run: |
+        BUILD_FILE="android/app/build.gradle"
+        # 获取当前versionCode
+        CURRENT_CODE=$(grep -oP 'versionCode\s+\K\d+' "$BUILD_FILE")
+        NEW_CODE=$((CURRENT_CODE + 1))
+        
+        # 获取当前versionName（默认为1.0）
+        CURRENT_NAME=$(grep -oP 'versionName\s+"\K[^"]+' "$BUILD_FILE" || echo "1.0")
+        
+        # 从tag获取版本名（如果有tag）
+        if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+          TAG_NAME="${GITHUB_REF#refs/tags/}"
+          # 移除v前缀
+          NEW_NAME="${TAG_NAME#v}"
+        else
+          # 如果没有tag，使用当前versionName + .build号
+          NEW_NAME="${CURRENT_NAME}.${NEW_CODE}"
+        fi
+        
+        # 更新build.gradle
+        sed -i "s/versionCode $CURRENT_CODE/versionCode $NEW_CODE/" "$BUILD_FILE"
+        sed -i "s/versionName \"$CURRENT_NAME\"/versionName \"$NEW_NAME\"/" "$BUILD_FILE"
+        
+        echo "✅ Version updated: versionCode=$NEW_CODE, versionName=$NEW_NAME"
+        cat "$BUILD_FILE" | grep -E "versionCode|versionName"
+    
     - name: Build web assets
       run: npm run build
     
