@@ -130,7 +130,7 @@ jobs:
           "https://api.github.com/repos/${{ github.repository }}/releases")
         
         # 获取上传URL
-        UPLOAD_URL=$(echo "$RELEASE_RESPONSE" | grep -oP '"upload_url":\s*"\K[^"]+' | sed 's/\{.*//')
+        UPLOAD_URL=$(echo "$RELEASE_RESPONSE" | grep -oP '"upload_url":\s*"\K[^"]+' | cut -d'{' -f1)
         echo "Upload URL: $UPLOAD_URL"
         
         # 上传APK
