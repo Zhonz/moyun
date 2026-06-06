@@ -26,10 +26,10 @@ jobs:
         if [ ! -f "android/app/build.gradle" ]; then echo "ERROR: app/build.gradle not found!"; exit 1; fi
         echo "✅ Android project structure OK!"
     
-    - name: Set up JDK 21
+    - name: Set up JDK 17
       uses: actions/setup-java@v4
       with:
-        java-version: '21'
+        java-version: '17'
         distribution: 'temurin'
         cache: gradle
     
