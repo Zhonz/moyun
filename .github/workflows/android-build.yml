@@ -111,37 +111,62 @@ jobs:
     
     - name: Create Release
       run: |
-        # 检查Release是否已存在
-        RELEASE_CHECK=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-          "https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ github.ref_name }}" || true)
+        python3 << 'EOF'
+        import os
+        import requests
+        import json
         
-        # 如果已存在，删除旧的
-        if echo "$RELEASE_CHECK" | grep -q '"tag_name":'; then
-          RELEASE_ID=$(echo "$RELEASE_CHECK" | grep -oP '"id":\s*\K\d+')
-          echo "Deleting existing release: $RELEASE_ID"
-          curl -s -X DELETE -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            "https://api.github.com/repos/${{ github.repository }}/releases/$RELEASE_ID"
-        fi
+        token = os.environ['GITHUB_TOKEN']
+        repo = os.environ['GITHUB_REPOSITORY']
+        tag_name = os.environ['GITHUB_REF_NAME']
+        
+        headers = {
+            'Authorization': f'token {token}',
+            'Accept': 'application/vnd.github.v3+json',
+            'Content-Type': 'application/json'
+        }
+        
+        # 检查Release是否已存在
+        get_url = f'https://api.github.com/repos/{repo}/releases/tags/{tag_name}'
+        get_response = requests.get(get_url, headers=headers)
+        if get_response.status_code == 200:
+            release_id = get_response.json()['id']
+            print(f"Deleting existing release: {release_id}")
+            requests.delete(f'https://api.github.com/repos/{repo}/releases/{release_id}', headers=headers)
         
         # 创建新的Release
-        RELEASE_RESPONSE=$(curl -s -X POST -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-          -H "Content-Type: application/json" \
-          -d "{\"tag_name\":\"${{ github.ref_name }}\",\"name\":\"墨韵 AI ${{ github.ref_name }}\",\"body\":\"## 墨韵 AI ${{ github.ref_name }}\n\n### 主要更新\n- 增强续写功能\n- 热更新机制\n- 自动版本号递增\",\"draft\":false,\"prerelease\":false}" \
-          "https://api.github.com/repos/${{ github.repository }}/releases")
+        release_data = {
+            'tag_name': tag_name,
+            'name': f'墨韵 AI {tag_name}',
+            'body': f'## 墨韵 AI {tag_name}\n\n### 主要更新\n- 增强续写功能\n- 热更新机制\n- 自动版本号递增',
+            'draft': False,
+            'prerelease': False
+        }
+        create_response = requests.post(f'https://api.github.com/repos/{repo}/releases', headers=headers, json=release_data)
+        create_response.raise_for_status()
+        release = create_response.json()
         
         # 获取上传URL
-        UPLOAD_URL=$(echo "$RELEASE_RESPONSE" | grep -oP '"upload_url":\s*"\K[^"]+' | cut -d'{' -f1)
-        echo "Upload URL: $UPLOAD_URL"
+        upload_url = release['upload_url'].replace('{?name,label}', '')
+        print(f"Upload URL: {upload_url}")
         
         # 上传APK
-        if [ -f "apk/app-debug.apk" ]; then
-          curl -s -X POST -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            -H "Content-Type: application/vnd.android.package-archive" \
-            --data-binary "@apk/app-debug.apk" \
-            "${UPLOAD_URL}?name=inkverse-ai-${{ github.ref_name }}.apk"
-          echo "✅ APK uploaded successfully"
-        else
-          echo "❌ APK file not found"
-          ls -la apk/
-          exit 1
-        fi
+        apk_path = 'apk/app-debug.apk'
+        if os.path.exists(apk_path):
+            with open(apk_path, 'rb') as f:
+                files = {'file': (f'inkverse-ai-{tag_name}.apk', f, 'application/vnd.android.package-archive')}
+                upload_response = requests.post(f'{upload_url}?name=inkverse-ai-{tag_name}.apk', 
+                                               headers={'Authorization': f'token {token}', 'Content-Type': 'application/vnd.android.package-archive'},
+                                               data=f)
+            upload_response.raise_for_status()
+            print("✅ APK uploaded successfully")
+        else:
+            print("❌ APK file not found")
+            import subprocess
+            subprocess.run(['ls', '-la', 'apk/'])
+            exit(1)
+        EOF
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        GITHUB_REF_NAME: ${{ github.ref_name }}
