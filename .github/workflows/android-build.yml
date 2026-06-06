@@ -44,15 +44,44 @@ jobs:
     - name: Install dependencies
       run: npm install
     
-    - name: Auto-increment version
+    - name: Generate or restore debug keystore
       run: |
-        BUILD_FILE="android/app/build.gradle"
-        # 获取当前versionCode
-        CURRENT_CODE=$(grep -oP 'versionCode\s+\K\d+' "$BUILD_FILE")
-        NEW_CODE=$((CURRENT_CODE + 1))
+        KEYSTORE_DIR="android/app"
+        KEYSTORE_FILE="$KEYSTORE_DIR/debug.keystore"
+        KEYSTORE_PROPS="$KEYSTORE_DIR/debug-keystore.properties"
         
-        # 获取当前versionName（默认为1.0）
-        CURRENT_NAME=$(grep -oP 'versionName\s+"\K[^"]+' "$BUILD_FILE" || echo "1.0")
+        if [ ! -f "$KEYSTORE_FILE" ]; then
+          echo "🔑 Generating stable debug keystore..."
+          keytool -genkey -v -keystore "$KEYSTORE_FILE" \
+            -storepass inkverse-debug \
+            -alias inkverse-debug \
+            -keypass inkverse-debug \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=inkverse, OU=inkverse, O=inkverse, L=Unknown, ST=Unknown, C=Unknown" 2>/dev/null || true
+        fi
+        
+        if [ ! -f "$KEYSTORE_PROPS" ]; then
+          cat > "$KEYSTORE_PROPS" << 'EOF'
+        storeFile=debug.keystore
+        storePassword=inkverse-debug
+        keyAlias=inkverse-debug
+        keyPassword=inkverse-debug
+        EOF
+        fi
+        
+        echo "✅ Debug keystore ready!"
+        ls -la $KEYSTORE_DIR/
+    
+    - name: Auto-increment version code
+      run: |
+        VERSION_FILE="android/app/version.properties"
+        
+        # 读取当前版本
+        CURRENT_CODE=$(grep -oP 'VERSION_CODE=\K\d+' "$VERSION_FILE")
+        CURRENT_NAME=$(grep -oP 'VERSION_NAME=\K[^"]+' "$VERSION_FILE")
+        NEW_CODE=$((CURRENT_CODE + 1))
         
         # 从tag获取版本名（如果有tag）
         if [[ "$GITHUB_REF" == refs/tags/* ]]; then
@@ -60,16 +89,15 @@ jobs:
           # 移除v前缀
           NEW_NAME="${TAG_NAME#v}"
         else
-          # 如果没有tag，使用当前versionName + .build号
-          NEW_NAME="${CURRENT_NAME}.${NEW_CODE}"
+          NEW_NAME="$CURRENT_NAME"
         fi
         
-        # 更新build.gradle
-        sed -i "s/versionCode $CURRENT_CODE/versionCode $NEW_CODE/" "$BUILD_FILE"
-        sed -i "s/versionName \"$CURRENT_NAME\"/versionName \"$NEW_NAME\"/" "$BUILD_FILE"
+        # 更新version.properties
+        sed -i "s/VERSION_CODE=$CURRENT_CODE/VERSION_CODE=$NEW_CODE/" "$VERSION_FILE"
+        sed -i "s/VERSION_NAME=$CURRENT_NAME/VERSION_NAME=$NEW_NAME/" "$VERSION_FILE"
         
         echo "✅ Version updated: versionCode=$NEW_CODE, versionName=$NEW_NAME"
-        cat "$BUILD_FILE" | grep -E "versionCode|versionName"
+        cat "$VERSION_FILE"
     
     - name: Build web assets
       run: npm run build

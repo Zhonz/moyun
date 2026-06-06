@@ -1,22 +1,73 @@
 apply plugin: 'com.android.application'
 
+// 读取版本号
+def getVersionCode() {
+    def versionPropsFile = file('version.properties')
+    if (versionPropsFile.canRead()) {
+        def Properties versionProps = new Properties()
+        versionProps.load(new FileInputStream(versionPropsFile))
+        def code = versionProps['VERSION_CODE'].toInteger()
+        return code
+    }
+    return 1
+}
+
+def getVersionName() {
+    def versionPropsFile = file('version.properties')
+    if (versionPropsFile.canRead()) {
+        def Properties versionProps = new Properties()
+        versionProps.load(new FileInputStream(versionPropsFile))
+        return versionProps['VERSION_NAME']
+    }
+    return "1.0"
+}
+
+// 读取签名配置
+def getSigningProperties() {
+    def keystorePropsFile = file('debug-keystore.properties')
+    if (keystorePropsFile.canRead()) {
+        def Properties keystoreProps = new Properties()
+        keystoreProps.load(new FileInputStream(keystorePropsFile))
+        return keystoreProps
+    }
+    return null
+}
+
 android {
     namespace = "com.inkverse.app"
     compileSdk = rootProject.ext.compileSdkVersion
+    
+    signingConfigs {
+        def keystoreProps = getSigningProperties()
+        if (keystoreProps != null) {
+            debug {
+                storeFile file(keystoreProps['storeFile'])
+                storePassword keystoreProps['storePassword']
+                keyAlias keystoreProps['keyAlias']
+                keyPassword keystoreProps['keyPassword']
+            }
+        }
+    }
+    
     defaultConfig {
         applicationId "com.inkverse.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode getVersionCode()
+        versionName getVersionName()
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
              // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
-            ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+            ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picosa.ini:!*~'
         }
     }
+    
     buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+            versionNameSuffix "-debug"
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'

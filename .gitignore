@@ -32,6 +32,10 @@ android/app/release/
 *.ap_
 *.apks
 *.dex
+# Keep debug keystore for stable builds
+!android/app/debug.keystore
+!android/app/debug-keystore.properties
+!android/app/version.properties
 # iOS
 ios/
 *.xcuserstate
