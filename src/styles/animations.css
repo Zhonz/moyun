@@ -1,0 +1,123 @@
+/* 动画关键帧 */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translate3d(0, 10px, 0);
+    }
+    to {
+        opacity: 1;
+        transform: translate3d(0, 0, 0);
+    }
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translate3d(0, 20px, 0);
+    }
+    to {
+        opacity: 1;
+        transform: translate3d(0, 0, 0);
+    }
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translate3d(100%, 0, 0);
+    }
+    to {
+        transform: translate3d(0, 0, 0);
+    }
+}
+
+@keyframes slideOutRight {
+    from {
+        transform: translate3d(0, 0, 0);
+    }
+    to {
+        transform: translate3d(100%, 0, 0);
+    }
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+@keyframes toastShow {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translate3d(0, 100px, 0);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translate3d(0, 0, 0);
+    }
+}
+
+/* Toast 动画 */
+.toast {
+    position: fixed;
+    bottom: calc(80px + var(--safe-area-bottom));
+    left: 50%;
+    transform: translateX(-50%) translate3d(0, 100px, 0);
+    background: var(--stone);
+    color: var(--rice-white);
+    padding: 12px 24px;
+    border-radius: 12px;
+    font-family: var(--font-ui);
+    font-size: 14px;
+    z-index: 300;
+    opacity: 0;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    will-change: transform, opacity;
+}
+
+.toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translate3d(0, 0, 0);
+}
+
+.toast.error {
+    background: var(--vermillion);
+}
+
+/* Spinner */
+.spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid transparent;
+    border-top-color: currentColor;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    will-change: transform;
+}
+
+/* Loading Indicator */
+.loading-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 16px;
+    padding: 12px;
+    background: var(--gold-dim);
+    border-radius: 10px;
+    font-family: var(--font-ui);
+    font-size: 14px;
+    color: var(--gold);
+}
+
+.loading-indicator .spinner {
+    border-top-color: var(--gold);
+}

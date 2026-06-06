@@ -1,266 +1,17 @@
 import './styles.css'
-
-const AI_PROVIDERS = {
-    openai: {
-        name: "OpenAI",
-        models: ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo"],
-        endpoint: "https://api.openai.com/v1/chat/completions",
-        modelsEndpoint: "https://api.openai.com/v1/models",
-        requiresAuth: true,
-        type: "openai"
-    },
-    anthropic: {
-        name: "Anthropic",
-        models: ["claude-3-5-sonnet-20241022", "claude-3-opus", "claude-3-sonnet", "claude-3-haiku"],
-        endpoint: "https://api.anthropic.com/v1/messages",
-        modelsEndpoint: null,
-        requiresAuth: true,
-        type: "anthropic"
-    },
-    deepseek: {
-        name: "DeepSeek",
-        models: ["deepseek-v4-pro", "deepseek-v4-flash"],
-        endpoint: "https://api.deepseek.com/v1/chat/completions",
-        modelsEndpoint: "https://api.deepseek.com/v1/models",
-        requiresAuth: true,
-        type: "openai"
-    },
-    qwen: {
-        name: "阿里千问",
-        models: ["qwen-turbo", "qwen-plus", "qwen-max", "qwen-coder-plus"],
-        endpoint: "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
-        modelsEndpoint: "https://dashscope.aliyuncs.com/compatible-mode/v1/models",
-        requiresAuth: true,
-        type: "openai"
-    },
-    glm: {
-        name: "智谱AI",
-        models: ["glm-4-flash", "glm-4-plus", "glm-4-long", "glm-4", "glm-3-turbo"],
-        endpoint: "https://open.bigmodel.cn/api/paas/v4/chat/completions",
-        modelsEndpoint: "https://open.bigmodel.cn/api/paas/v4/models",
-        requiresAuth: true,
-        type: "openai"
-    },
-    moonshot: {
-        name: "月之暗面",
-        models: ["moonshot-v1-8k", "moonshot-v1-32k", "moonshot-v1-128k"],
-        endpoint: "https://api.moonshot.cn/v1/chat/completions",
-        modelsEndpoint: "https://api.moonshot.cn/v1/models",
-        requiresAuth: true,
-        type: "openai"
-    },
-    doubao: {
-        name: "字节豆包",
-        models: ["ep-20241204153318-5n6lh", "doubao-seed-pro-32k", "doubao-seed-lite-32k"],
-        endpoint: "https://ark.cn-beijing.volces.com/api/v3/chat/completions",
-        modelsEndpoint: "https://ark.cn-beijing.volces.com/api/v1/models",
-        requiresAuth: true,
-        type: "openai"
-    },
-    yi: {
-        name: "零一万物",
-        models: ["yi-lightning", "yi-large", "yi-large-turbo", "yi-medium"],
-        endpoint: "https://api.lingyiwanwu.com/v1/chat/completions",
-        modelsEndpoint: "https://api.lingyiwanwu.com/v1/models",
-        requiresAuth: true,
-        type: "openai"
-    },
-    custom: {
-        name: "自定义",
-        endpoint: "",
-        models: [],
-        requiresAuth: true,
-        type: "openai"
-    }
-};
-
-const CREATIVE_TEMPLATES = {
-    novels: {
-        category: "小说创作",
-        emoji: "📖",
-        templates: [
-            { id: "opening", name: "小说开头", prompt: "请创作一个引人入胜的小说开头，能够立即抓住读者的注意力。故事背景：{theme}要求：制造悬念，建立氛围，引入主角。", example: "一个发生在民国时期的爱情故事" },
-            { id: "plot_twist", name: "情节转折", prompt: "请设计一个意外但合乎逻辑的情节转折，让故事走向全新的方向。当前情节：{theme}要求：震撼但不突兀，改变人物命运。", example: "主角发现自己最好的朋友背叛了自己" },
-            { id: "character_intro", name: "人物介绍", prompt: "请用生动的方式向读者介绍这个角色。人物设定：{theme}要求：外貌、性格、背景、动机融为一体。", example: "一位神秘的古董商人" },
-            { id: "scene_build", name: "场景描写", prompt: "请描写这个场景，营造氛围。场景：{theme}要求：调动多种感官，与情节结合。", example: "雨夜的古老图书馆" },
-            { id: "dialogue", name: "对话写作", prompt: "请创作符合人物性格的对话。情境：{theme}要求：推动情节，展现关系，语言鲜明。", example: "情侣在雨中争吵" },
-            { id: "ending", name: "小说结尾", prompt: "请创作一个令人回味的结局。故事概要：{theme}要求：回应主题，情感满足，留有余韵。", example: "历尽磨难的两人最终重逢" },
-            { id: "worldbuilding", name: "世界观设定", prompt: "请构建一个完整的世界观。设定：{theme}要求：地理、历史、文化、力量体系。", example: "东方仙侠世界" },
-            { id: "conflict", name: "冲突设计", prompt: "请设计多层次的冲突。背景：{theme}要求：内部冲突、外部冲突、人际冲突。", example: "主角在道义与亲情间抉择" },
-            { id: "foreshadow", name: "伏笔埋设", prompt: "请埋设巧妙的伏笔。伏笔对象：{theme}要求：自然融入情节，日后有呼应。", example: "某个物品将成为关键线索" },
-            { id: "climax", name: "高潮场景", prompt: "请创作故事的最高潮。情节铺垫：{theme}要求：所有矛盾爆发，情感达到顶点。", example: "最终决战即将开始" },
-            { id: "flashback", name: "回忆插叙", prompt: "请写一段回忆，揭示{theme}要求：与现在形成呼应，深化人物动机。", example: "主角童年的一次关键经历" },
-            { id: "letter", name: "书信体叙事", prompt: "请以书信的形式讲述{theme}要求：展现写信人的情感与秘密。", example: "一封无法寄出的情书" },
-            { id: "dream", name: "梦境描写", prompt: "请描写关于{theme}的梦境，要求：隐喻丰富，虚实交错，暗示情节。", example: "预示未来的怪梦" }
-        ]
-    },
-    characters: {
-        category: "人物设计",
-        emoji: "👤",
-        templates: [
-            { id: "hero", name: "主角设定", prompt: "请设计一个立体的主角。类型：{theme}要求：优点、缺点、动机、成长弧光。", example: "平凡少年拯救世界" },
-            { id: "villain", name: "反派塑造", prompt: "请设计有魅力的反派。类型：{theme}要求：不脸谱化，有动机，有魅力。", example: "被误解的悲剧性反派" },
-            { id: "mentor", name: "导师角色", prompt: "请设计引导主角的导师。设定：{theme}要求：智慧，有自己的秘密，与主角形成对比。", example: "隐世的神秘老人" },
-            { id: "love_interest", name: "爱情对象", prompt: "请设计令人心动的爱情对象。设定：{theme}要求：有个性，与主角有化学反应，不是花瓶。", example: "独立强大的女性角色" },
-            { id: "rival", name: "竞争对手", prompt: "请设计旗鼓相当的竞争对手。设定：{theme}要求：互相促进，亦敌亦友。", example: "主角的宿命对手" },
-            { id: "sidekick", name: "伙伴/助手", prompt: "请设计一个得力助手。设定：{theme}要求：互补主角，推动剧情，有自己的故事。", example: "搞笑但可靠的助手" },
-            { id: "antihero", name: "反英雄", prompt: "请设计一个复杂的反英雄。设定：{theme}要求：道德灰色，魅力十足，有自己的原则。", example: "做坏事但有底线的人" },
-            { id: "mythical", name: "神秘生物", prompt: "请设计一个幻想生物。设定：{theme}要求：外形、能力、背景、与人类关系。", example: "东方神龙" },
-            { id: "transformation", name: "角色成长", prompt: "请设计角色的成长轨迹。初始设定：{theme}要求：有低谷、转折点、觉醒。", example: "从懦弱到勇敢" },
-            { id: "side_char", name: "配角弧光", prompt: "给配角{theme}设计完整的故事线，要求：有自己的目标、挣扎、结局。", example: "酒馆老板" },
-            { id: "family", name: "家庭关系", prompt: "设计主角的家庭：{theme}要求：复杂的情感纽带与矛盾。", example: "重组家庭" }
-        ]
-    },
-    writing_tools: {
-        category: "写作工具",
-        emoji: "✍️",
-        templates: [
-            { id: "title_gen", name: "标题生成", prompt: "请为以下内容生成吸引人的标题。内容：{theme}要求：提供5个不同风格的标题选项。", example: "一个穿越回古代的现代人故事" },
-            { id: "synopsis", name: "剧情概要", prompt: "请把以下剧情浓缩成吸引人的简介。剧情：{theme}要求：150-300字，悬念感。", example: "长篇小说的详细剧情" },
-            { id: "chapter_outline", name: "章节大纲", prompt: "请为以下故事设计章节划分和大纲。故事：{theme}要求：每章有小高潮，整体节奏良好。", example: "整个故事的构思" },
-            { id: "expand", name: "扩写", prompt: "请把以下内容扩写成更详细的段落。原文：{theme}要求：增加细节、描写、对话。", example: "简短的草稿" },
-            { id: "rewrite", name: "改写优化", prompt: "请改写以下内容，让它更出色。原文：{theme}要求：保持原意，提升文采。", example: "需要润色的段落" },
-            { id: "style_emulate", name: "风格模仿", prompt: "请用特定作家的风格来写。风格/作家：{theme}要求：学习风格但不抄袭。", example: "模仿鲁迅风格" },
-            { id: "cut_trim", name: "精简压缩", prompt: "请把以下内容精简到一半长度。原文：{theme}要求：保留所有重要信息，更精炼。", example: "过于冗长的内容" },
-            { id: "polish", name: "语言润色", prompt: "请润色以下文字，让它更优美。原文：{theme}要求：用词精准，句式优美，节奏好。", example: "写得有些粗糙的文字" }
-        ]
-    },
-    genres: {
-        category: "类型文学",
-        emoji: "🎭",
-        templates: [
-            { id: "xianxia", name: "仙侠修真", prompt: "请创作仙侠修真风格的内容。设定：{theme}要求：境界、功法、丹药、门派、天地灵气。", example: "一个资质平庸的弟子的崛起" },
-            { id: "fantasy", name: "奇幻魔法", prompt: "请创作西方奇幻风格内容。设定：{theme}要求：魔法、种族、王国、冒险。", example: "一个魔法师的成长故事" },
-            { id: "scifi", name: "科幻", prompt: "请创作科幻故事。设定：{theme}要求：科技、未来、太空、AI。", example: "宇航员在遥远星系的奇遇" },
-            { id: "mystery", name: "悬疑推理", prompt: "请创作悬疑推理故事。设定：{theme}要求：线索、误导、逻辑、反转。", example: "密室杀人案" },
-            { id: "romance", name: "浪漫爱情", prompt: "请创作甜蜜的爱情故事。设定：{theme}要求：心动、误会、和解、甜蜜。", example: "霸道总裁与灰姑娘" },
-            { id: "horror", name: "恐怖惊悚", prompt: "请创作恐怖氛围的故事。设定：{theme}要求：紧张、悬念、心理压迫。", example: "发生在废弃医院的怪事" },
-            { id: "comedy", name: "幽默搞笑", prompt: "请创作搞笑幽默的内容。设定：{theme}要求：笑点、反差、机智。", example: "一连串的倒霉事" },
-            { id: "historical", name: "历史穿越", prompt: "请创作历史或穿越故事。设定：{theme}要求：符合或改变历史。", example: "穿越到唐朝" }
-        ]
-    },
-    content: {
-        category: "内容创作",
-        emoji: "📝",
-        templates: [
-            { id: "essay", name: "散文随笔", prompt: "请创作一篇优美的散文。主题：{theme}要求：真挚、文采、意境。", example: "关于故乡的回忆" },
-            { id: "poem", name: "现代诗", prompt: "请创作一首现代诗。主题：{theme}要求：意象、节奏、情感。", example: "孤独的主题" },
-            { id: "gu_poetry", name: "古风诗词", prompt: "请创作古风诗词。主题：{theme}要求：押韵、意境、用典。", example: "送别友人" },
-            { id: "speech", name: "演讲稿", prompt: "请创作一篇有感染力的演讲稿。主题：{theme}要求：有逻辑、有情感、有气势。", example: "关于梦想的演讲" },
-            { id: "marketing", name: "营销文案", prompt: "请创作吸引人的营销文案。产品/服务：{theme}要求：痛点、卖点、行动号召。", example: "一款智能产品" },
-            { id: "story", name: "短篇故事", prompt: "请创作一个完整的短篇故事。主题：{theme}要求：有起承转合。", example: "陌生人之间的温暖故事" },
-            { id: "copywriting", name: "公众号推文", prompt: "请创作一篇适合公众号的文章。主题：{theme}要求：标题吸睛、结构清晰、有共鸣。", example: "关于年轻人生活的话题" },
-            { id: "product_desc", name: "产品描述", prompt: "请创作出色的产品描述。产品：{theme}要求：突出优势、建立信任、激发购买欲。", example: "一款保温杯" },
-            { id: "review", name: "书评影评", prompt: "请写一篇深度评论。作品：{theme}要求：有观点、有分析、有文采。", example: "一部让你感动的电影" },
-            { id: "news", name: "新闻报道", prompt: "请写一篇客观的新闻报道。事件：{theme}要求：5W1H、中立、清晰。", example: "社区活动" },
-            { id: "diary", name: "日记随笔", prompt: "请写一篇情感真挚的日记。今日主题：{theme}要求：细节、真实、有温度。", example: "一个难忘的瞬间" },
-            { id: "travel", name: "游记攻略", prompt: "请写一篇引人入胜的游记。目的地：{theme}要求：风景、感受、实用信息。", example: "一次难忘的旅行" }
-        ]
-    },
-    ideation: {
-        category: "创意灵感",
-        emoji: "💡",
-        templates: [
-            { id: "prompt_generator", name: "提示词生成", prompt: "请为以下目标设计一个详细的AI提示词。创作目标：{theme}要求：详细、结构清晰、可直接使用。", example: "写一篇短篇小说" },
-            { id: "story_ideas", name: "故事点子", prompt: "请为以下类型提供10个故事创意。类型：{theme}要求：每个点子有一句话简介。", example: "都市奇幻" },
-            { id: "world_ideas", name: "世界观构思", prompt: "请构思一个新颖的世界观设定。类型：{theme}要求：有特色、有冲突、有故事可能性。", example: "时间可以交易的世界" },
-            { id: "character_ideas", name: "人物创意", prompt: "请提供5个有趣的人物设定。类型：{theme}要求：独特、有故事性。", example: "配角也精彩" },
-            { id: "scene_ideas", name: "场景灵感", prompt: "请提供10个令人印象深刻的场景构思。类型：{theme}要求：有画面感、有故事性。", example: "重逢的场景" },
-            { id: "dialogue_ideas", name: "对话创意", prompt: "请提供5个有趣的对话情境。类型：{theme}要求：有张力、有潜台词。", example: "充满秘密的对话" }
-        ]
-    },
-    advanced: {
-        category: "高级功能",
-        emoji: "🚀",
-        templates: [
-            { id: "co_writer", name: "AI协作写作", prompt: "请作为写作助手，与我一起完成创作。当前内容：{theme}要求：提供建议、补充描写、丰富对话。", example: "开头已经写好，请继续" },
-            { id: "editor", name: "AI编辑", prompt: "请作为专业编辑，审阅以下内容。文章：{theme}要求：指出优点、不足、修改建议。", example: "写好的小说章节" },
-            { id: "critic", name: "AI评论", prompt: "请作为文学评论家，评论以下作品。作品：{theme}要求：客观、深入、有建设性。", example: "写完的短篇故事" },
-            { id: "teacher", name: "写作教学", prompt: "请教我如何提升特定写作能力。要学习：{theme}要求：讲解、范例、练习建议。", example: "如何把人物写活" },
-            { id: "brainstorm", name: "头脑风暴", prompt: "请围绕以下主题进行头脑风暴。主题：{theme}要求：提出尽可能多的可能性。", example: "下个故事写什么" },
-            { id: "translate_style", name: "风格转换", prompt: "请将以下内容转换成另一种风格。内容和风格：{theme}要求：保持内容，改变风格。", example: "把悲剧改成喜剧版本" }
-        ]
-    },
-    writing_prompts: {
-        category: "写作提示词",
-        emoji: "✨",
-        templates: [
-            { id: "prop_prompt", name: "物品提示", prompt: "请以这个物品为核心来写。物品：{theme}要求：物品在故事中有关键作用。", example: "一张泛黄的旧照片" },
-            { id: "sentence_prompt", name: "第一句", prompt: "请从这句话开始写。第一句：{theme}要求：保持这个开头。", example: "那天她才知道，自己其实不是人类" },
-            { id: "emotion_prompt", name: "情感提示", prompt: "请写一段能唤起以下情感的文字。情感：{theme}要求：让读者感同身受。", example: "孤独感" },
-            { id: "image_prompt", name: "画面提示", prompt: "请描写一个这样的场景。画面描述：{theme}要求：有画面感，有气氛。", example: "阳光穿过老房子的窗户" },
-            { id: "theme_prompt", name: "主题提示", prompt: "请创作围绕这个主题的内容。主题：{theme}要求：探讨主题，有深度。", example: "选择与代价" }
-        ]
-    },
-    professional: {
-        category: "专业写作",
-        emoji: "💼",
-        templates: [
-            { id: "business_plan", name: "商业计划书", prompt: "请为以下项目写一份商业计划。项目：{theme}要求：市场、产品、运营、财务。", example: "一家咖啡店" },
-            { id: "resume", name: "简历优化", prompt: "请帮助优化简历。个人信息：{theme}要求：突出优势、专业、量化成果。", example: "软件工程师的简历" },
-            { id: "cover_letter", name: "求职信", prompt: "请写一封有说服力的求职信。申请职位：{theme}要求：针对职位、展示优势、有个性。", example: "产品经理岗位" },
-            { id: "article", name: "专业文章", prompt: "请写一篇专业领域的文章。主题：{theme}要求：有深度、有干货、结构清。", example: "关于人工智能的发展" },
-            { id: "report", name: "分析报告", prompt: "请为以下主题写一份分析报告。主题：{theme}要求：数据、分析、结论、建议。", example: "市场分析报告" }
-        ]
-    }
-};
-
-const WRITING_STYLES = {
-    general: { name: "通用", prompt: "" },
-    classical: { name: "古风", prompt: "请使用古雅、凝练的中文，追求意境和韵味。用词考究，句法工整。" },
-    modern: { name: "现代", prompt: "请使用自然流畅的现代白话文，简洁有力，贴近生活。" },
-    lyric: { name: "诗意", prompt: "请使用优美抒情的语言，富有韵律和画面感，情感细腻。" },
-    suspense: { name: "悬疑", prompt: "请营造悬念氛围，节奏紧凑，信息逐步释放，保持紧张感。" },
-    romance: { name: "浪漫", prompt: "请注重情感表达，细腻温柔，营造浪漫氛围。" },
-    humor: { name: "幽默", prompt: "请使用幽默风趣的语言，轻松有趣，让人会心一笑。" },
-    epic: { name: "史诗", prompt: "请使用宏大叙事的笔触，气势磅礴，视野广阔。" },
-    minimal: { name: "极简", prompt: "请使用简洁凝练的语言，惜墨如金，言简意赅。" }
-};
-
-const OUTPUT_LENGTHS = {
-    short: { name: "短篇", min: 100, max: 300 },
-    medium: { name: "中篇", min: 300, max: 800 },
-    long: { name: "长篇", min: 800, max: 2000 },
-    very_long: { name: "超长篇", min: 2000, max: 5000 }
-};
+import apiHandler from './utils/api-handler.js'
+import stateManager, { AI_PROVIDERS } from './core/state-manager.js'
+import TemplateManager, { CREATIVE_TEMPLATES, WRITING_STYLES, OUTPUT_LENGTHS } from './modules/template-manager.js'
+import HistoryManager from './modules/history-manager.js'
+import { validatePromptInput, validateApiKey, validateCustomEndpoint } from './utils/validators.js'
+import { formatDate, truncateText } from './utils/formatters.js'
 
 class InkverseApp {
     constructor() {
-        this.state = {
-            currentMode: 'create',
-            currentTemplate: null,
-            currentCategory: 'novels',
-            style: 'general',
-            length: 'medium',
-            creativity: 0.7,
-            provider: 'deepseek',
-            model: '',
-            apiKey: '',
-            customEndpoint: '',
-            history: [],
-            favorites: [],
-            customTemplates: [],
-            currentResult: null,
-            isGenerating: false,
-            conversationHistory: [],
-            theme: 'dark',
-            searchQuery: '',
-            templateSearchQuery: '',
-            showFavoritesOnly: false,
-            stats: {
-                totalCreations: 0,
-                templatesUsed: {},
-                lastUsed: null
-            },
-            chatHistory: [],
-            draft: {
-                content: '',
-                template: null,
-                timestamp: null
-            },
-            cachedModels: {}
-        };
-
+        this.state = stateManager.getState();
+        this.templateManager = new TemplateManager(stateManager);
+        this.historyManager = new HistoryManager(stateManager);
+        
         this.loadState();
         this.initUI();
         this.bindEvents();
@@ -269,42 +20,12 @@ class InkverseApp {
     }
 
     loadState() {
-        try {
-            const saved = localStorage.getItem('inkverse_state');
-            if (saved) {
-                this.state = { ...this.state, ...JSON.parse(saved) };
-            }
-            // 确保默认模型被加载
-            this.ensureDefaultModels();
-        } catch (e) {
-            console.log('No saved state');
-        }
-    }
-
-    ensureDefaultModels() {
-        // 为每个提供商设置默认模型（如果没有缓存）
-        for (const [provider, config] of Object.entries(AI_PROVIDERS)) {
-            if (!this.state.cachedModels[provider] || this.state.cachedModels[provider].length === 0) {
-                if (config.models && config.models.length > 0) {
-                    this.state.cachedModels[provider] = [...config.models];
-                }
-            }
-        }
+        stateManager.load();
+        this.state = stateManager.getState();
     }
 
     saveState() {
-        const toSave = {
-            provider: this.state.provider,
-            model: this.state.model,
-            apiKey: this.state.apiKey,
-            customEndpoint: this.state.customEndpoint,
-            history: this.state.history.slice(-200),
-            favorites: this.state.favorites,
-            customTemplates: this.state.customTemplates,
-            theme: this.state.theme,
-            cachedModels: this.state.cachedModels
-        };
-        localStorage.setItem('inkverse_state', JSON.stringify(toSave));
+        stateManager.save();
     }
 
     initUI() {
@@ -318,11 +39,13 @@ class InkverseApp {
     }
 
     applyTheme() {
-        document.body.classList.toggle('light-theme', this.state.theme === 'light');
+        document.body.classList.toggle('light-theme', this.state.theme === 'dark' ? false : this.state.theme === 'light');
     }
 
     toggleTheme() {
-        this.state.theme = this.state.theme === 'dark' ? 'light' : 'dark';
+        const currentTheme = stateManager.get('theme');
+        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        stateManager.set('theme', newTheme);
         this.applyTheme();
         this.saveState();
     }
@@ -331,15 +54,17 @@ class InkverseApp {
         const container = document.getElementById('categories');
         if (!container) return;
 
-        container.innerHTML = Object.entries(CREATIVE_TEMPLATES).map(([key, cat]) => `
-            <button class="category-btn ${key === this.state.currentCategory ? 'active' : ''}" data-category="${key}">
+        const categories = this.templateManager.getCategories();
+        container.innerHTML = categories.map(cat => `
+            <button class="category-btn ${cat.key === this.state.currentCategory ? 'active' : ''}" data-category="${cat.key}">
                 <span class="category-emoji">${cat.emoji}</span>
-                <span>${cat.category}</span>
+                <span>${cat.name}</span>
             </button>
         `).join('');
 
         container.querySelectorAll('.category-btn').forEach(btn => {
             btn.addEventListener('click', () => {
+                stateManager.set('currentCategory', btn.dataset.category);
                 this.state.currentCategory = btn.dataset.category;
                 this.renderCategories();
                 this.renderTemplates();
@@ -351,21 +76,10 @@ class InkverseApp {
         const container = document.getElementById('templates');
         if (!container) return;
 
-        let data = CREATIVE_TEMPLATES[this.state.currentCategory];
-        let templates = [...data.templates];
-        
-        if (this.state.customTemplates.length > 0 && this.state.currentCategory === 'novels') {
-            templates = [...templates, ...this.state.customTemplates];
-        }
-        
-        // 搜索过滤
-        if (this.state.templateSearchQuery && this.state.templateSearchQuery.trim()) {
-            const query = this.state.templateSearchQuery.toLowerCase();
-            templates = templates.filter(t => 
-                t.name.toLowerCase().includes(query) || 
-                t.example.toLowerCase().includes(query)
-            );
-        }
+        const templates = this.templateManager.filterTemplates(
+            this.state.currentCategory,
+            this.state.templateSearchQuery
+        );
         
         if (templates.length === 0) {
             container.innerHTML = '<div class="empty-state">没有找到匹配的模板</div>';
@@ -377,7 +91,7 @@ class InkverseApp {
                 <div class="template-header">
                     <h4>${t.name}</h4>
                     <button class="favorite-btn" data-fav-id="${t.id}" title="收藏">
-                        ${this.isFavorite(t.id) ? '⭐' : '☆'}
+                        ${this.templateManager.isFavorite(t.id) ? '⭐' : '☆'}
                     </button>
                 </div>
                 <p class="template-hint">示例：${t.example}</p>
@@ -386,15 +100,7 @@ class InkverseApp {
 
         container.querySelectorAll('.template-card').forEach(card => {
             card.addEventListener('click', () => {
-                let allTemplates;
-                if (this.state.currentCategory === 'novels') {
-                    allTemplates = [...CREATIVE_TEMPLATES.novels.templates, ...this.state.customTemplates];
-                } else {
-                    allTemplates = CREATIVE_TEMPLATES[this.state.currentCategory].templates;
-                }
-                // 如果有搜索，我们需要在所有模板中查找，不仅仅是过滤后的列表
-                const searchTemplates = this.searchAllTemplates();
-                const template = searchTemplates.find(t => t.id === card.dataset.id);
+                const template = this.templateManager.findTemplateById(card.dataset.id);
                 if (template) {
                     this.selectTemplate(template);
                 }
@@ -404,49 +110,15 @@ class InkverseApp {
         container.querySelectorAll('.favorite-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                this.toggleFavorite(btn.dataset.favId);
+                const isFavorited = this.templateManager.toggleFavorite(btn.dataset.favId);
+                this.showToast(isFavorited ? '已收藏' : '已取消收藏');
+                this.renderTemplates();
             });
         });
     }
-    
-    searchAllTemplates() {
-        const allTemplates = [];
-        Object.values(CREATIVE_TEMPLATES).forEach(cat => {
-            allTemplates.push(...cat.templates);
-        });
-        if (this.state.customTemplates.length > 0) {
-            allTemplates.push(...this.state.customTemplates);
-        }
-        return allTemplates;
-    }
 
-    isFavorite(templateId) {
-        return this.state.favorites.includes(templateId);
-    }
-
-    toggleFavorite(templateId) {
-        if (this.isFavorite(templateId)) {
-            this.state.favorites = this.state.favorites.filter(id => id !== templateId);
-            this.showToast('已取消收藏');
-        } else {
-            this.state.favorites.push(templateId);
-            this.showToast('已收藏');
-        }
-        this.saveState();
-        this.renderTemplates();
-    }
-
-    getTemplateCategoryName(template) {
-        for (const categoryKey in CREATIVE_TEMPLATES) {
-            const category = CREATIVE_TEMPLATES[categoryKey];
-            if (category.templates && category.templates.includes(template)) {
-                return category.category;
-            }
-        }
-        return '';
-    }
-    
     selectTemplate(template) {
+        stateManager.set('currentTemplate', template);
         this.state.currentTemplate = template;
         document.getElementById('prompt-input').value = `\n\n<!-- 在这里输入你的主题/内容 -->`;
         
@@ -461,7 +133,8 @@ class InkverseApp {
         const container = document.getElementById('style-select');
         if (!container) return;
 
-        container.innerHTML = Object.entries(WRITING_STYLES).map(([key, style]) => `
+        const styles = this.templateManager.getWritingStyles();
+        container.innerHTML = Object.entries(styles).map(([key, style]) => `
             <button class="style-chip ${key === this.state.style ? 'active' : ''}" data-style="${key}">
                 ${style.name}
             </button>
@@ -469,6 +142,7 @@ class InkverseApp {
 
         container.querySelectorAll('.style-chip').forEach(chip => {
             chip.addEventListener('click', () => {
+                stateManager.set('style', chip.dataset.style);
                 this.state.style = chip.dataset.style;
                 this.renderStyles();
             });
@@ -479,7 +153,8 @@ class InkverseApp {
         const container = document.getElementById('length-select');
         if (!container) return;
 
-        container.innerHTML = Object.entries(OUTPUT_LENGTHS).map(([key, len]) => `
+        const lengths = this.templateManager.getOutputLengths();
+        container.innerHTML = Object.entries(lengths).map(([key, len]) => `
             <button class="length-chip ${key === this.state.length ? 'active' : ''}" data-length="${key}">
                 ${len.name}
             </button>
@@ -487,6 +162,7 @@ class InkverseApp {
 
         container.querySelectorAll('.length-chip').forEach(chip => {
             chip.addEventListener('click', () => {
+                stateManager.set('length', chip.dataset.length);
                 this.state.length = chip.dataset.length;
                 this.renderLengths();
             });
@@ -497,15 +173,7 @@ class InkverseApp {
         const container = document.getElementById('history');
         if (!container) return;
 
-        let filteredHistory = this.state.history.slice();
-        
-        if (this.state.searchQuery) {
-            const query = this.state.searchQuery.toLowerCase();
-            filteredHistory = filteredHistory.filter(item => 
-                item.prompt.toLowerCase().includes(query) || 
-                item.result.toLowerCase().includes(query)
-            );
-        }
+        let filteredHistory = this.historyManager.searchHistory(this.state.searchQuery);
 
         if (filteredHistory.length === 0) {
             container.innerHTML = '<div class="empty-state">暂无创作记录</div>';
@@ -515,10 +183,10 @@ class InkverseApp {
         container.innerHTML = filteredHistory.slice().reverse().map((item, index) => `
             <div class="history-item" data-index="${index}">
                 <div class="history-header">
-                    <span class="history-title">${item.templateName || '创作'} · ${new Date(item.timestamp).toLocaleString()}</span>
+                    <span class="history-title">${item.templateName || '创作'} · ${formatDate(item.timestamp)}</span>
                     <button class="delete-history-btn" data-delete-id="${index}" title="删除">🗑️</button>
                 </div>
-                <div class="history-preview">${item.prompt.substring(0, 80)}...</div>
+                <div class="history-preview">${truncateText(item.prompt, 80)}...</div>
                 <div class="history-actions">
                     <button class="history-action-btn" data-copy-id="${index}">📋 复制</button>
                     <button class="history-action-btn" data-share-id="${index}">🔗 分享</button>
@@ -544,8 +212,8 @@ class InkverseApp {
                 e.stopPropagation();
                 const index = parseInt(btn.dataset.deleteId);
                 const actualIndex = this.state.history.length - 1 - index;
-                this.state.history.splice(actualIndex, 1);
-                this.saveState();
+                this.historyManager.deleteHistoryItem(actualIndex);
+                this.state.history = this.historyManager.getHistory();
                 this.renderHistory();
                 this.showToast('已删除');
             });
@@ -580,6 +248,7 @@ class InkverseApp {
     }
 
     switchMode(mode) {
+        stateManager.set('currentMode', mode);
         this.state.currentMode = mode;
         
         const createPanel = document.getElementById('create-panel');
@@ -590,13 +259,13 @@ class InkverseApp {
         if (mode === 'create') {
             createPanel.style.display = 'block';
             chatPanel.style.display = 'none';
-            modeCreateBtn.classList.add('active');
-            modeChatBtn.classList.remove('active');
+            modeCreateBtn?.classList.add('active');
+            modeChatBtn?.classList.remove('active');
         } else {
             createPanel.style.display = 'none';
             chatPanel.style.display = 'flex';
-            modeChatBtn.classList.add('active');
-            modeCreateBtn.classList.remove('active');
+            modeChatBtn?.classList.add('active');
+            modeCreateBtn?.classList.remove('active');
             this.renderChatHistory();
         }
         
@@ -648,7 +317,11 @@ class InkverseApp {
             return;
         }
         
-        this.state.chatHistory.push({ role: 'user', content: message });
+        const chatHistory = [...this.state.chatHistory];
+        chatHistory.push({ role: 'user', content: message });
+        stateManager.set('chatHistory', chatHistory);
+        this.state.chatHistory = chatHistory;
+        
         input.value = '';
         input.style.height = 'auto';
         this.renderChatHistory();
@@ -667,14 +340,20 @@ class InkverseApp {
             
             document.getElementById('typing-indicator')?.remove();
             
-            this.state.chatHistory.push({ role: 'assistant', content: response });
+            const updatedHistory = [...this.state.chatHistory];
+            updatedHistory.push({ role: 'assistant', content: response });
+            stateManager.set('chatHistory', updatedHistory);
+            this.state.chatHistory = updatedHistory;
             this.saveState();
             this.renderChatHistory();
             
         } catch (e) {
             document.getElementById('typing-indicator')?.remove();
             this.showToast(`发送失败：${e.message}`, 'error');
-            this.state.chatHistory.pop();
+            const failedHistory = [...this.state.chatHistory];
+            failedHistory.pop();
+            stateManager.set('chatHistory', failedHistory);
+            this.state.chatHistory = failedHistory;
             this.renderChatHistory();
         }
     }
@@ -704,37 +383,31 @@ class InkverseApp {
         
         const content = promptInput.value.trim();
         if (content && content.length > 10) {
-            this.state.draft = {
+            stateManager.set('draft', {
                 content: content,
                 template: this.state.currentTemplate?.id || null,
                 timestamp: Date.now()
-            };
+            });
+            this.state.draft = stateManager.get('draft');
             this.saveState();
         }
     }
 
     loadDraft() {
-        if (this.state.draft && this.state.draft.content) {
+        const draft = stateManager.get('draft');
+        if (draft && draft.content) {
             const promptInput = document.getElementById('prompt-input');
             if (promptInput) {
-                promptInput.value = this.state.draft.content;
+                promptInput.value = draft.content;
             }
             
-            if (this.state.draft.template) {
-                const template = this.findTemplateById(this.state.draft.template);
+            if (draft.template) {
+                const template = this.templateManager.findTemplateById(draft.template);
                 if (template) {
                     this.selectTemplate(template);
                 }
             }
         }
-    }
-
-    findTemplateById(id) {
-        for (const category of Object.values(CREATIVE_TEMPLATES)) {
-            const found = category.templates.find(t => t.id === id);
-            if (found) return found;
-        }
-        return null;
     }
 
     async autoFetchModels() {
@@ -749,7 +422,7 @@ class InkverseApp {
     }
 
     async fetchModelsFromAPI() {
-        const provider = this.state.provider;
+        const provider = stateManager.get('provider');
         const providerConfig = AI_PROVIDERS[provider];
         const infoEl = document.getElementById('model-update-info');
         
@@ -774,13 +447,13 @@ class InkverseApp {
                 modelsEndpoint = `${baseUrl}/models`;
             }
             
-            const response = await fetch(modelsEndpoint, {
+            const response = await apiHandler.callWithRetry(modelsEndpoint, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${this.state.apiKey}`,
                     'Content-Type': 'application/json'
                 }
-            });
+            }, 3);
             
             if (!response.ok) {
                 throw new Error(`API请求失败：${response.status}`);
@@ -799,7 +472,6 @@ class InkverseApp {
                     .sort();
             }
             
-            // 合并默认模型和API获取的模型，去重
             const defaultModels = providerConfig.models || [];
             const combinedModels = [...new Set([...defaultModels, ...apiModels])].sort();
             
@@ -809,7 +481,10 @@ class InkverseApp {
                 return;
             }
             
-            this.state.cachedModels[provider] = combinedModels;
+            const cachedModels = { ...this.state.cachedModels };
+            cachedModels[provider] = combinedModels;
+            stateManager.set('cachedModels', cachedModels);
+            this.state.cachedModels = cachedModels;
             this.saveState();
             
             this.updateModelOptions();
@@ -819,10 +494,12 @@ class InkverseApp {
             
         } catch (e) {
             console.error('获取模型列表失败:', e);
-            // 如果API获取失败，检查是否有默认模型
             if (providerConfig.models && providerConfig.models.length > 0) {
-                if (!this.state.cachedModels[provider] || this.state.cachedModels[provider].length === 0) {
-                    this.state.cachedModels[provider] = [...providerConfig.models];
+                const cachedModels = { ...this.state.cachedModels };
+                if (!cachedModels[provider] || cachedModels[provider].length === 0) {
+                    cachedModels[provider] = [...providerConfig.models];
+                    stateManager.set('cachedModels', cachedModels);
+                    this.state.cachedModels = cachedModels;
                     this.saveState();
                     this.updateModelOptions();
                     this.renderCurrentModelsList();
@@ -874,7 +551,8 @@ class InkverseApp {
         }
         
         const provider = this.state.provider;
-        let models = this.state.cachedModels[provider] || [];
+        const cachedModels = { ...this.state.cachedModels };
+        let models = cachedModels[provider] || [];
         
         if (models.includes(modelName)) {
             this.showToast('该模型已存在', 'error');
@@ -884,7 +562,9 @@ class InkverseApp {
         models.push(modelName);
         models.sort();
         
-        this.state.cachedModels[provider] = models;
+        cachedModels[provider] = models;
+        stateManager.set('cachedModels', cachedModels);
+        this.state.cachedModels = cachedModels;
         this.saveState();
         
         this.updateModelOptions();
@@ -895,14 +575,17 @@ class InkverseApp {
     
     removeModel(index) {
         const provider = this.state.provider;
-        let models = this.state.cachedModels[provider] || [];
+        const cachedModels = { ...this.state.cachedModels };
+        let models = cachedModels[provider] || [];
         
         if (index < 0 || index >= models.length) return;
         
         const removedModel = models[index];
         models.splice(index, 1);
         
-        this.state.cachedModels[provider] = models;
+        cachedModels[provider] = models;
+        stateManager.set('cachedModels', cachedModels);
+        this.state.cachedModels = cachedModels;
         this.saveState();
         
         this.updateModelOptions();
@@ -944,6 +627,7 @@ class InkverseApp {
         if (models.includes(this.state.model)) {
             select.value = this.state.model;
         } else {
+            stateManager.set('model', models[0]);
             this.state.model = models[0];
             select.value = this.state.model;
         }
@@ -960,6 +644,8 @@ class InkverseApp {
         document.getElementById('add-template-btn')?.addEventListener('click', () => this.addCustomTemplate());
         
         document.getElementById('provider-select')?.addEventListener('change', (e) => {
+            stateManager.set('provider', e.target.value);
+            stateManager.set('model', '');
             this.state.provider = e.target.value;
             this.state.model = '';
             this.updateModelOptions();
@@ -973,20 +659,24 @@ class InkverseApp {
         });
         
         document.getElementById('model-select')?.addEventListener('change', (e) => {
+            stateManager.set('model', e.target.value);
             this.state.model = e.target.value;
         });
         
         document.getElementById('creativity-slider')?.addEventListener('input', (e) => {
+            stateManager.set('creativity', parseFloat(e.target.value));
             this.state.creativity = parseFloat(e.target.value);
             document.getElementById('creativity-value').textContent = this.state.creativity.toFixed(1);
         });
         
         document.getElementById('search-input')?.addEventListener('input', (e) => {
+            stateManager.set('searchQuery', e.target.value);
             this.state.searchQuery = e.target.value;
             this.renderHistory();
         });
         
         document.getElementById('templates-search')?.addEventListener('input', (e) => {
+            stateManager.set('templateSearchQuery', e.target.value);
             this.state.templateSearchQuery = e.target.value;
             this.renderTemplates();
         });
@@ -1074,10 +764,13 @@ class InkverseApp {
 
     async generate() {
         const input = document.getElementById('prompt-input').value.trim();
-        if (!input) {
-            this.showToast('请输入内容！', 'error');
+        
+        const validation = validatePromptInput(input);
+        if (!validation.valid) {
+            this.showToast(validation.message, 'error');
             return;
         }
+        
         if (!this.state.apiKey) {
             this.showToast('请先设置API Key！', 'error');
             this.toggleSettings();
@@ -1090,7 +783,9 @@ class InkverseApp {
             return;
         }
 
+        stateManager.set('isGenerating', true);
         this.state.isGenerating = true;
+        
         const btn = document.getElementById('generate-btn');
         const loadingIndicator = document.getElementById('loading-indicator');
         if (btn) btn.disabled = true;
@@ -1103,22 +798,16 @@ class InkverseApp {
                 this.updateStreamingResult(chunk);
             });
             
+            stateManager.set('currentResult', result);
             this.state.currentResult = result;
             
-            const historyItem = {
-                prompt: input,
-                result: result,
-                templateName: this.state.currentTemplate?.name,
-                timestamp: Date.now()
-            };
-            this.state.history.push(historyItem);
-            
-            this.state.stats.totalCreations++;
-            this.state.stats.lastUsed = Date.now();
-            if (this.state.currentTemplate) {
-                this.state.stats.templatesUsed[this.state.currentTemplate.id] = 
-                    (this.state.stats.templatesUsed[this.state.currentTemplate.id] || 0) + 1;
-            }
+            this.historyManager.addHistoryItem(
+                input,
+                result,
+                this.state.currentTemplate?.name
+            );
+            this.state.history = this.historyManager.getHistory();
+            this.state.stats = this.historyManager.getStats();
             
             this.saveState();
             this.renderHistory();
@@ -1130,6 +819,7 @@ class InkverseApp {
             this.showToast(`生成失败：${e.message}`, 'error');
             document.getElementById('result').innerHTML = '';
         } finally {
+            stateManager.set('isGenerating', false);
             this.state.isGenerating = false;
             if (btn) btn.disabled = false;
             if (loadingIndicator) loadingIndicator.style.display = 'none';
@@ -1199,13 +889,17 @@ class InkverseApp {
             return;
         }
 
+        stateManager.set('isGenerating', true);
         this.state.isGenerating = true;
+        
         const btn = document.getElementById('continue-btn');
         if (btn) btn.disabled = true;
 
         try {
             const continuation = await this.callAIWithHistory('请继续上文创作，保持风格一致');
             const newResult = this.state.currentResult + '\n\n' + continuation;
+            
+            stateManager.set('currentResult', newResult);
             this.state.currentResult = newResult;
             
             this.displayResult(newResult, 'AI创作结果（已续写）');
@@ -1214,6 +908,7 @@ class InkverseApp {
         } catch (e) {
             this.showToast(`续写失败：${e.message}`, 'error');
         } finally {
+            stateManager.set('isGenerating', false);
             this.state.isGenerating = false;
             if (btn) btn.disabled = false;
         }
@@ -1225,7 +920,7 @@ class InkverseApp {
         
         let prompt = '';
         if (this.state.currentTemplate) {
-            prompt = this.state.currentTemplate.prompt.replace('{theme}', userPrompt);
+            prompt = this.templateManager.applyTemplate(this.state.currentTemplate, userPrompt);
         } else {
             prompt = userPrompt;
         }
@@ -1234,7 +929,7 @@ class InkverseApp {
         if (this.state.currentTemplate && this.state.currentTemplate.id) {
             const template = this.state.currentTemplate;
             const templateName = template.name || '';
-            const categoryName = this.getTemplateCategoryName(template);
+            const categoryName = this.templateManager.getTemplateCategoryName(template);
             genreHint = `\n\n【创作题材】：${categoryName} - ${templateName}`;
         }
         
@@ -1245,7 +940,8 @@ class InkverseApp {
             { role: 'user', content: fullPrompt }
         ];
         
-        this.state.conversationHistory = [...messages];
+        stateManager.set('conversationHistory', [...messages]);
+        this.state.conversationHistory = messages;
         return await this.makeAPICall(messages);
     }
 
@@ -1255,7 +951,7 @@ class InkverseApp {
         
         let prompt = '';
         if (this.state.currentTemplate) {
-            prompt = this.state.currentTemplate.prompt.replace('{theme}', userPrompt);
+            prompt = this.templateManager.applyTemplate(this.state.currentTemplate, userPrompt);
         } else {
             prompt = userPrompt;
         }
@@ -1264,7 +960,7 @@ class InkverseApp {
         if (this.state.currentTemplate && this.state.currentTemplate.id) {
             const template = this.state.currentTemplate;
             const templateName = template.name || '';
-            const categoryName = this.getTemplateCategoryName(template);
+            const categoryName = this.templateManager.getTemplateCategoryName(template);
             genreHint = `\n\n【创作题材】：${categoryName} - ${templateName}`;
         }
         
@@ -1275,7 +971,8 @@ class InkverseApp {
             { role: 'user', content: fullPrompt }
         ];
         
-        this.state.conversationHistory = [...messages];
+        stateManager.set('conversationHistory', [...messages]);
+        this.state.conversationHistory = messages;
         return await this.makeStreamingAPICall(messages, onChunk);
     }
 
@@ -1293,7 +990,7 @@ class InkverseApp {
         const endpoint = this.state.provider === 'custom' ? 
             this.state.customEndpoint : providerConfig.endpoint;
         
-        const response = await fetch(endpoint, {
+        const response = await apiHandler.fetchWithTimeout(endpoint, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -1350,7 +1047,7 @@ class InkverseApp {
             content: m.content
         }));
         
-        const response = await fetch(providerConfig.endpoint, {
+        const response = await apiHandler.fetchWithTimeout(providerConfig.endpoint, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -1403,13 +1100,18 @@ class InkverseApp {
     }
 
     async callAIWithHistory(additionalPrompt) {
+        const conversationHistory = [...this.state.conversationHistory];
         const messages = [
-            ...this.state.conversationHistory,
+            ...conversationHistory,
             { role: 'user', content: additionalPrompt }
         ];
         const result = await this.makeAPICall(messages);
-        this.state.conversationHistory.push({ role: 'user', content: additionalPrompt });
-        this.state.conversationHistory.push({ role: 'assistant', content: result });
+        
+        conversationHistory.push({ role: 'user', content: additionalPrompt });
+        conversationHistory.push({ role: 'assistant', content: result });
+        stateManager.set('conversationHistory', conversationHistory);
+        this.state.conversationHistory = conversationHistory;
+        
         return result;
     }
 
@@ -1427,7 +1129,7 @@ class InkverseApp {
         const endpoint = this.state.provider === 'custom' ? 
             this.state.customEndpoint : providerConfig.endpoint;
         
-        const response = await fetch(endpoint, {
+        const response = await apiHandler.callWithRetry(endpoint, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -1456,7 +1158,7 @@ class InkverseApp {
             content: m.content
         }));
         
-        const response = await fetch(providerConfig.endpoint, {
+        const response = await apiHandler.callWithRetry(providerConfig.endpoint, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -1516,14 +1218,40 @@ class InkverseApp {
     }
 
     saveApiSettings() {
-        this.state.apiKey = document.getElementById('api-key').value;
-        this.state.customEndpoint = document.getElementById('custom-endpoint').value;
-        this.state.provider = document.getElementById('provider-select').value;
-        this.state.model = document.getElementById('model-select').value;
+        const apiKey = document.getElementById('api-key').value;
+        const customEndpoint = document.getElementById('custom-endpoint').value;
+        const provider = document.getElementById('provider-select').value;
+        const model = document.getElementById('model-select').value;
+        
+        // Validate
+        const validation = validateApiKey(apiKey, provider);
+        if (!validation.valid) {
+            this.showToast(validation.message, 'error');
+            return;
+        }
+        
+        if (provider === 'custom') {
+            const endpointValidation = validateCustomEndpoint(customEndpoint);
+            if (!endpointValidation.valid) {
+                this.showToast(endpointValidation.message, 'error');
+                return;
+            }
+        }
+        
+        stateManager.set('apiKey', apiKey);
+        stateManager.set('customEndpoint', customEndpoint);
+        stateManager.set('provider', provider);
+        stateManager.set('model', model);
+        
+        this.state.apiKey = apiKey;
+        this.state.customEndpoint = customEndpoint;
+        this.state.provider = provider;
+        this.state.model = model;
+        
         this.saveState();
         this.toggleSettings();
         
-        if (this.state.apiKey) {
+        if (apiKey) {
             setTimeout(() => {
                 this.fetchModelsFromAPI();
             }, 1000);
@@ -1555,12 +1283,14 @@ class InkverseApp {
         const container = document.getElementById('custom-templates-container');
         if (!container) return;
 
-        if (this.state.customTemplates.length === 0) {
+        const customTemplates = this.state.customTemplates || [];
+
+        if (customTemplates.length === 0) {
             container.innerHTML = '<div class="empty-state">还没有自定义模板</div>';
             return;
         }
 
-        container.innerHTML = this.state.customTemplates.map((template, index) => `
+        container.innerHTML = customTemplates.map((template, index) => `
             <div class="custom-template-item">
                 <div class="custom-template-item-header">
                     <h4>${template.name}</h4>
@@ -1569,7 +1299,7 @@ class InkverseApp {
                         <button class="custom-template-item-btn delete" data-delete-id="${index}">删除</button>
                     </div>
                 </div>
-                <div class="custom-template-item-preview">${template.prompt.substring(0, 80)}...</div>
+                <div class="custom-template-item-preview">${truncateText(template.prompt, 80)}...</div>
             </div>
         `).join('');
 
@@ -1598,15 +1328,8 @@ class InkverseApp {
             return;
         }
 
-        const newTemplate = {
-            id: `custom_${Date.now()}`,
-            name,
-            prompt,
-            example: example || '自定义模板'
-        };
-
-        this.state.customTemplates.push(newTemplate);
-        this.saveState();
+        this.templateManager.addCustomTemplate(name, prompt, example);
+        this.state.customTemplates = stateManager.get('customTemplates');
         this.renderCustomTemplates();
         this.renderTemplates();
 
@@ -1618,14 +1341,17 @@ class InkverseApp {
     }
 
     editCustomTemplate(index) {
-        const template = this.state.customTemplates[index];
+        const customTemplates = this.state.customTemplates || [];
+        const template = customTemplates[index];
         if (!template) return;
 
         document.getElementById('new-template-name').value = template.name;
         document.getElementById('new-template-prompt').value = template.prompt;
         document.getElementById('new-template-example').value = template.example;
 
-        this.state.customTemplates.splice(index, 1);
+        customTemplates.splice(index, 1);
+        stateManager.set('customTemplates', customTemplates);
+        this.state.customTemplates = customTemplates;
         this.saveState();
         this.renderCustomTemplates();
         this.renderTemplates();
@@ -1634,37 +1360,20 @@ class InkverseApp {
     }
 
     deleteCustomTemplate(index) {
-        this.state.customTemplates.splice(index, 1);
-        this.saveState();
+        this.templateManager.deleteCustomTemplate(index);
+        this.state.customTemplates = stateManager.get('customTemplates');
         this.renderCustomTemplates();
         this.renderTemplates();
         this.showToast('模板已删除');
     }
 
     batchExportHistory() {
-        if (this.state.history.length === 0) {
+        const count = this.historyManager.batchExport();
+        if (count === null) {
             this.showToast('暂无历史记录可导出', 'error');
-            return;
+        } else {
+            this.showToast(`已导出 ${count} 条记录！`);
         }
-
-        const exportContent = this.state.history.map((item, index) => {
-            const date = new Date(item.timestamp).toLocaleString('zh-CN');
-            return `# ${index + 1}. ${item.templateName || '创作'} - ${date}\n\n## 创作内容\n${item.prompt}\n\n## AI生成\n${item.result}\n\n---\n`;
-        }).join('\n');
-
-        const header = `# 墨韵AI创作记录导出\n\n导出时间: ${new Date().toLocaleString('zh-CN')}\n共 ${this.state.history.length} 条创作记录\n\n---\n\n`;
-
-        const fullContent = header + exportContent;
-
-        const blob = new Blob([fullContent], { type: 'text/markdown' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `inkverse-export-${Date.now()}.md`;
-        a.click();
-        URL.revokeObjectURL(url);
-
-        this.showToast(`已导出 ${this.state.history.length} 条记录！`);
     }
 }
 

@@ -1,0 +1,41 @@
+/* 墨韵 AI 主题变量 */
+:root {
+    /* 颜色变量 */
+    --ink-black: #0D0D0F;
+    --charcoal: #1A1A1D;
+    --stone: #242428;
+    --slate: #333338;
+    --gold: #C9A962;
+    --gold-dim: rgba(201, 169, 98, 0.15);
+    --jade: #6B8E6B;
+    --jade-dim: rgba(107, 142, 107, 0.15);
+    --rice-white: #F5F5F5;
+    --silk-gray: #A0A0A5;
+    --ink-wash: #66666B;
+    --vermillion: #D4644A;
+    --bamboo: #7AB87A;
+    
+    /* 安全区域 */
+    --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-area-top: env(safe-area-inset-top, 0px);
+    
+    /* 字体变量 */
+    --font-display: 'ZCOOL XiaoWei', 'Noto Serif SC', serif;
+    --font-body: 'Noto Serif SC', 'Source Han Serif SC', serif;
+    --font-ui: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* Light Theme */
+body.light-theme {
+    --ink-black: #F8F7F4;
+    --charcoal: #FFFFFF;
+    --stone: #F0EFEB;
+    --slate: #E0DFDB;
+    --rice-white: #1A1A1D;
+    --silk-gray: #666660;
+    --ink-wash: #999994;
+    --gold: #B8942E;
+    --gold-dim: rgba(184, 148, 46, 0.15);
+    --jade: #5A7A5A;
+    --jade-dim: rgba(90, 122, 90, 0.15);
+}
