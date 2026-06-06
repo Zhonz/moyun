@@ -48,7 +48,6 @@ jobs:
       run: |
         KEYSTORE_DIR="android/app"
         KEYSTORE_FILE="$KEYSTORE_DIR/debug.keystore"
-        KEYSTORE_PROPS="$KEYSTORE_DIR/debug-keystore.properties"
         
         if [ ! -f "$KEYSTORE_FILE" ]; then
           echo "🔑 Generating stable debug keystore..."
@@ -62,25 +61,16 @@ jobs:
             -dname "CN=inkverse, OU=inkverse, O=inkverse, L=Unknown, ST=Unknown, C=Unknown" 2>/dev/null || true
         fi
         
-        if [ ! -f "$KEYSTORE_PROPS" ]; then
-          cat > "$KEYSTORE_PROPS" << 'EOF'
-        storeFile=debug.keystore
-        storePassword=inkverse-debug
-        keyAlias=inkverse-debug
-        keyPassword=inkverse-debug
-        EOF
-        fi
-        
         echo "✅ Debug keystore ready!"
         ls -la $KEYSTORE_DIR/
     
     - name: Auto-increment version code
       run: |
-        VERSION_FILE="android/app/version.properties"
+        BUILD_FILE="android/app/build.gradle"
         
         # 读取当前版本
-        CURRENT_CODE=$(grep -oP 'VERSION_CODE=\K\d+' "$VERSION_FILE")
-        CURRENT_NAME=$(grep -oP 'VERSION_NAME=\K[^"]+' "$VERSION_FILE")
+        CURRENT_CODE=$(grep -oP 'versionCode\s+\K\d+' "$BUILD_FILE")
+        CURRENT_NAME=$(grep -oP 'versionName\s+"\K[^"]+' "$BUILD_FILE")
         NEW_CODE=$((CURRENT_CODE + 1))
         
         # 从tag获取版本名（如果有tag）
@@ -92,12 +82,12 @@ jobs:
           NEW_NAME="$CURRENT_NAME"
         fi
         
-        # 更新version.properties
-        sed -i "s/VERSION_CODE=$CURRENT_CODE/VERSION_CODE=$NEW_CODE/" "$VERSION_FILE"
-        sed -i "s/VERSION_NAME=$CURRENT_NAME/VERSION_NAME=$NEW_NAME/" "$VERSION_FILE"
+        # 更新build.gradle
+        sed -i "s/versionCode $CURRENT_CODE/versionCode $NEW_CODE/" "$BUILD_FILE"
+        sed -i "s/versionName \"$CURRENT_NAME\"/versionName \"$NEW_NAME\"/" "$BUILD_FILE"
         
         echo "✅ Version updated: versionCode=$NEW_CODE, versionName=$NEW_NAME"
-        cat "$VERSION_FILE"
+        cat "$BUILD_FILE" | grep -E "versionCode|versionName"
     
     - name: Build web assets
       run: npm run build
