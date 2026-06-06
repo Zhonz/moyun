@@ -1,7 +1,10 @@
 /**
  * 状态管理器
  * 负责应用状态的加载、保存和初始化
+ * 支持热更新：数据存储在 IndexedDB 中，更新应用不丢失数据
  */
+import { persistentStorage } from '../utils/persistent-storage.js';
+
 const AI_PROVIDERS = {
     openai: {
         name: "OpenAI",
@@ -83,6 +86,8 @@ class StateManager {
     constructor() {
         this.state = this.getDefaultState();
         this.listeners = new Map();
+        this.usePersistentStorage = true; // 默认使用持久化存储
+        this.isLoaded = false;
     }
 
     getDefaultState() {
@@ -124,18 +129,54 @@ class StateManager {
 
     /**
      * 加载保存的状态
+     * 优先从 IndexedDB 加载，支持热更新
      */
-    load() {
+    async load() {
         try {
+            // 首先执行数据迁移（如果需要）
+            await persistentStorage.migrateIfNeeded();
+
+            // 尝试从 IndexedDB 加载
+            const persistentData = await persistentStorage.getAllItems();
+
+            if (persistentData && Object.keys(persistentData).length > 0) {
+                // 从持久化存储加载
+                this.state = {
+                    ...this.getDefaultState(),
+                    provider: persistentData.provider || this.state.provider,
+                    model: persistentData.model || this.state.model,
+                    apiKey: persistentData.apiKey || this.state.apiKey,
+                    customEndpoint: persistentData.customEndpoint || this.state.customEndpoint,
+                    theme: persistentData.theme || this.state.theme,
+                    cachedModels: persistentData.cachedModels || this.state.cachedModels,
+                    favorites: persistentData.favorites || [],
+                    customTemplates: persistentData.customTemplates || []
+                };
+                this.ensureDefaultModels();
+                this.isLoaded = true;
+                return this.state;
+            }
+
+            // 如果没有数据，尝试从 localStorage 加载（兼容旧版本）
             const saved = localStorage.getItem(STORAGE_KEY);
             if (saved) {
                 const parsed = JSON.parse(saved);
                 this.state = { ...this.getDefaultState(), ...parsed };
+
+                // 将数据迁移到持久化存储
+                await this.saveToPersistent();
+                this.ensureDefaultModels();
+                this.isLoaded = true;
+                return this.state;
             }
+
             this.ensureDefaultModels();
+            this.isLoaded = true;
             return this.state;
         } catch (e) {
-            console.log('No saved state');
+            console.log('No saved state or load error:', e);
+            this.ensureDefaultModels();
+            this.isLoaded = true;
             return this.state;
         }
     }
@@ -154,9 +195,29 @@ class StateManager {
     }
 
     /**
-     * 保存状态到 localStorage
+     * 保存状态到 IndexedDB（持久化存储，支持热更新）
+     * 同时保留 localStorage 备份
      */
-    save() {
+    async save() {
+        // 保存到 IndexedDB（主要存储，支持热更新）
+        if (this.usePersistentStorage) {
+            try {
+                await persistentStorage.setItems({
+                    provider: this.state.provider,
+                    model: this.state.model,
+                    apiKey: this.state.apiKey,
+                    customEndpoint: this.state.customEndpoint,
+                    theme: this.state.theme,
+                    cachedModels: this.state.cachedModels,
+                    favorites: this.state.favorites,
+                    customTemplates: this.state.customTemplates
+                });
+            } catch (e) {
+                console.error('保存到持久化存储失败:', e);
+            }
+        }
+
+        // 同时保存到 localStorage（备份）
         const toSave = {
             provider: this.state.provider,
             model: this.state.model,
@@ -169,6 +230,26 @@ class StateManager {
             cachedModels: this.state.cachedModels
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
+    }
+
+    /**
+     * 保存到持久化存储
+     */
+    async saveToPersistent() {
+        try {
+            await persistentStorage.setItems({
+                provider: this.state.provider,
+                model: this.state.model,
+                apiKey: this.state.apiKey,
+                customEndpoint: this.state.customEndpoint,
+                theme: this.state.theme,
+                cachedModels: this.state.cachedModels,
+                favorites: this.state.favorites,
+                customTemplates: this.state.customTemplates
+            });
+        } catch (e) {
+            console.error('保存到持久化存储失败:', e);
+        }
     }
 
     /**

@@ -13,16 +13,23 @@ class InkverseApp {
         this.historyManager = new HistoryManager(stateManager);
         this._historyCurrentPage = 0;
         this._lastHistorySearchQuery = '';
-        
-        this.loadState();
+        this._initialized = false;
+
+        this.initApp();
+    }
+
+    async initApp() {
+        await this.loadState();
+        this.state = stateManager.getState();
         this.initUI();
         this.bindEvents();
         this.autoSaveDraft();
         this.autoFetchModels();
+        this._initialized = true;
     }
 
-    loadState() {
-        stateManager.load();
+    async loadState() {
+        await stateManager.load();
         this.state = stateManager.getState();
     }
 
@@ -918,19 +925,30 @@ class InkverseApp {
 
         stateManager.set('isGenerating', true);
         this.state.isGenerating = true;
-        
+
         const btn = document.getElementById('continue-btn');
         if (btn) btn.disabled = true;
 
         try {
-            const continuation = await this.callAIWithHistory('请继续上文创作，保持风格一致');
+            // 将原文本发送给AI，让AI在已生成文本的基础上续写
+            const continuationPrompt = `请续写以下文本，保持相同的风格、语调和叙事连续性。只输出续写内容，不要重复已写部分。\n\n=== 原文 ===\n${this.state.currentResult}\n=== 续写开始 ===`;
+            const continuation = await this.callAIWithStreaming(continuationPrompt, (chunk) => {
+                this.updateStreamingResult(chunk);
+            });
             const newResult = this.state.currentResult + '\n\n' + continuation;
-            
+
             stateManager.set('currentResult', newResult);
             this.state.currentResult = newResult;
-            
+
+            // 更新对话历史，用于后续可能的多次续写
+            const conversationHistory = this.state.conversationHistory || [];
+            conversationHistory.push({ role: 'user', content: continuationPrompt });
+            conversationHistory.push({ role: 'assistant', content: continuation });
+            stateManager.set('conversationHistory', conversationHistory);
+            this.state.conversationHistory = conversationHistory;
+
             this.displayResult(newResult, 'AI创作结果（已续写）');
-            
+
             this.showToast('续写成功！');
         } catch (e) {
             this.showToast(`续写失败：${e.message}`, 'error');
