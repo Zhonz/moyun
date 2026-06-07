@@ -14,6 +14,7 @@ class InkverseApp {
         this._historyCurrentPage = 0;
         this._lastHistorySearchQuery = '';
         this._initialized = false;
+        this._draftSaveTimer = null;
 
         this.initApp();
     }
@@ -405,9 +406,6 @@ class InkverseApp {
         return await this.makeAPICall(messages);
     }
 
-    // 防抖定时器
-    _draftSaveTimer: null,
-    
     autoSaveDraft() {
         setInterval(() => {
             this.saveDraft();
