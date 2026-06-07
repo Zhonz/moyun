@@ -46,6 +46,22 @@ class InkverseApp {
         this.renderHistory();
         this.updateModelOptions();
         this.applyTheme();
+        
+        // 初始化思考模式相关UI状态
+        this.updateThinkingUI();
+    }
+    
+    updateThinkingUI() {
+        // 更新设置面板的复选框
+        const enableThinkingEl = document.getElementById('enable-thinking');
+        const showThinkingEl = document.getElementById('show-thinking');
+        const enableThinkingToggle = document.getElementById('enable-thinking-toggle');
+        const showThinkingToggle = document.getElementById('show-thinking-toggle');
+        
+        if (enableThinkingEl) enableThinkingEl.checked = this.state.enableThinking;
+        if (showThinkingEl) showThinkingEl.checked = this.state.showThinking;
+        if (enableThinkingToggle) enableThinkingToggle.checked = this.state.enableThinking;
+        if (showThinkingToggle) showThinkingToggle.checked = this.state.showThinking;
     }
 
     applyTheme() {
@@ -792,6 +808,21 @@ class InkverseApp {
                 this.addManualModel();
             }
         });
+        
+        // 思考模式相关事件绑定
+        const bindThinkingToggle = (id, stateKey) => {
+            document.getElementById(id)?.addEventListener('change', (e) => {
+                stateManager.set(stateKey, e.target.checked);
+                this.state[stateKey] = e.target.checked;
+                this.updateThinkingUI();
+                this.saveState();
+            });
+        };
+        
+        bindThinkingToggle('enable-thinking', 'enableThinking');
+        bindThinkingToggle('show-thinking', 'showThinking');
+        bindThinkingToggle('enable-thinking-toggle', 'enableThinking');
+        bindThinkingToggle('show-thinking-toggle', 'showThinking');
 
         document.addEventListener('keydown', (e) => {
             if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
@@ -1043,6 +1074,20 @@ class InkverseApp {
         return await this.makeStreamingAPICall(messages, onChunk);
     }
 
+    // 包装思考内容，添加视觉标识
+    wrapThinkingContent(content, isInReasoning) {
+        if (!isInReasoning) {
+            // 开始思考模式时添加开始标记
+            return `<span class="thinking-content">💭 ${content}`;
+        }
+        return content;
+    }
+    
+    // 结束思考内容的标记
+    endThinkingContent() {
+        return `</span>\n`;
+    }
+    
     async makeStreamingAPICall(messages, onChunk) {
         const providerConfig = AI_PROVIDERS[this.state.provider];
         
@@ -1059,19 +1104,29 @@ class InkverseApp {
         const endpoint = this.state.provider === 'custom' ? 
             customEndpoint : providerConfig.endpoint;
         
+        const requestBody = {
+            model: this.state.model,
+            messages: messages,
+            temperature: this.state.creativity,
+            max_tokens: 3000,
+            stream: true
+        };
+        
+        // 如果启用思考模式，添加思考相关参数
+        if (this.state.enableThinking) {
+            // 为支持 reasoning 的模型添加相关参数
+            // 不同提供商可能有不同的参数名，我们这里使用通用的处理方式
+            // DeepSeek 等模型使用 reasoning_effort
+            requestBody.reasoning_effort = 'medium';
+        }
+        
         const response = await apiHandler.fetchWithTimeout(endpoint, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${apiKey}`
             },
-            body: JSON.stringify({
-                model: this.state.model,
-                messages: messages,
-                temperature: this.state.creativity,
-                max_tokens: 3000,
-                stream: true
-            })
+            body: JSON.stringify(requestBody)
         });
 
         if (!response.ok) {
@@ -1081,6 +1136,8 @@ class InkverseApp {
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let fullContent = '';
+        let isInReasoning = false;
+        const showThinking = this.state.showThinking;
 
         while (true) {
             const { done, value } = await reader.read();
@@ -1095,15 +1152,42 @@ class InkverseApp {
                     if (data === '[DONE]') continue;
                     try {
                         const parsed = JSON.parse(data);
-                        const content = parsed.choices?.[0]?.delta?.content;
-                        if (content) {
-                            fullContent += content;
-                            onChunk(content);
+                        const delta = parsed.choices?.[0]?.delta;
+                        
+                        if (delta) {
+                            // 检查是否有思考内容 (reasoning 或 thinking)
+                            if (delta.reasoning_content || delta.reasoning) {
+                                const reasoningContent = delta.reasoning_content || delta.reasoning;
+                                if (showThinking) {
+                                    const wrappedContent = this.wrapThinkingContent(reasoningContent, isInReasoning);
+                                    if (!isInReasoning) isInReasoning = true;
+                                    fullContent += reasoningContent;
+                                    onChunk(wrappedContent);
+                                } else {
+                                    fullContent += reasoningContent;
+                                }
+                            }
+                            
+                            // 普通内容
+                            if (delta.content) {
+                                if (isInReasoning && showThinking) {
+                                    // 结束思考模式的标记
+                                    onChunk(this.endThinkingContent());
+                                    isInReasoning = false;
+                                }
+                                fullContent += delta.content;
+                                onChunk(delta.content);
+                            }
                         }
                     } catch (e) {
                     }
                 }
             }
+        }
+        
+        // 如果最后还在思考模式，结束它
+        if (isInReasoning && showThinking) {
+            onChunk(this.endThinkingContent());
         }
 
         return fullContent;
@@ -1117,6 +1201,23 @@ class InkverseApp {
             content: m.content
         }));
         
+        const requestBody = {
+            model: this.state.model,
+            max_tokens: 2048,
+            stream: true,
+            system: systemMessage?.content || '',
+            messages: otherMessages
+        };
+        
+        // 如果启用思考模式，添加思考相关参数 (Anthropic 的 thinking 模式)
+        if (this.state.enableThinking) {
+            // Anthropic Claude 的 thinking 模式使用 thinking 参数
+            requestBody.thinking = {
+                type: 'enabled',
+                budget_tokens: 1024
+            };
+        }
+        
         const response = await apiHandler.fetchWithTimeout(providerConfig.endpoint, {
             method: 'POST',
             headers: {
@@ -1125,13 +1226,7 @@ class InkverseApp {
                 'anthropic-version': '2023-06-01',
                 'anthropic-dangerous-direct-browser-access': 'true'
             },
-            body: JSON.stringify({
-                model: this.state.model,
-                max_tokens: 2048,
-                stream: true,
-                system: systemMessage?.content || '',
-                messages: otherMessages
-            })
+            body: JSON.stringify(requestBody)
         });
 
         if (!response.ok) {
@@ -1141,6 +1236,8 @@ class InkverseApp {
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let fullContent = '';
+        let isInReasoning = false;
+        const showThinking = this.state.showThinking;
 
         while (true) {
             const { done, value } = await reader.read();
@@ -1155,15 +1252,41 @@ class InkverseApp {
                     if (data === '[DONE]') continue;
                     try {
                         const parsed = JSON.parse(data);
-                        const content = parsed.delta?.text;
-                        if (content) {
-                            fullContent += content;
-                            onChunk(content);
+                        
+                        // 检查是否有思考内容
+                        if (parsed.type === 'thinking_delta') {
+                            const thinkingContent = parsed.thinking_delta?.thinking;
+                            if (thinkingContent && showThinking) {
+                                const wrappedContent = this.wrapThinkingContent(thinkingContent, isInReasoning);
+                                if (!isInReasoning) isInReasoning = true;
+                                fullContent += thinkingContent;
+                                onChunk(wrappedContent);
+                            } else if (thinkingContent) {
+                                fullContent += thinkingContent;
+                            }
+                        }
+                        
+                        // 检查普通内容
+                        if (parsed.type === 'content_block_delta' || parsed.delta?.text) {
+                            const content = parsed.delta?.text;
+                            if (content) {
+                                if (isInReasoning && showThinking) {
+                                    onChunk(this.endThinkingContent());
+                                    isInReasoning = false;
+                                }
+                                fullContent += content;
+                                onChunk(content);
+                            }
                         }
                     } catch (e) {
                     }
                 }
             }
+        }
+        
+        // 如果最后还在思考模式，结束它
+        if (isInReasoning && showThinking) {
+            onChunk(this.endThinkingContent());
         }
 
         return fullContent;
@@ -1290,6 +1413,8 @@ class InkverseApp {
             this.updateModelOptions();
             document.getElementById('model-select').value = this.state.model;
             this.renderCurrentModelsList();
+            // 更新思考模式的UI状态
+            this.updateThinkingUI();
         }
     }
 
@@ -1298,6 +1423,8 @@ class InkverseApp {
         const customEndpoint = document.getElementById('custom-endpoint').value;
         const provider = document.getElementById('provider-select').value;
         const model = document.getElementById('model-select').value;
+        const enableThinking = document.getElementById('enable-thinking').checked;
+        const showThinking = document.getElementById('show-thinking').checked;
         
         // Validate
         const validation = validateApiKey(apiKey, provider);
@@ -1319,6 +1446,8 @@ class InkverseApp {
         stateManager.setCustomEndpoint(customEndpoint, provider);
         stateManager.set('provider', provider);
         stateManager.set('model', model);
+        stateManager.set('enableThinking', enableThinking);
+        stateManager.set('showThinking', showThinking);
         
         this.state.apiKeys = stateManager.state.apiKeys;
         this.state.customEndpoints = stateManager.state.customEndpoints;
@@ -1326,6 +1455,8 @@ class InkverseApp {
         this.state.model = model;
         this.state.apiKey = apiKey;
         this.state.customEndpoint = customEndpoint;
+        this.state.enableThinking = enableThinking;
+        this.state.showThinking = showThinking;
         
         this.saveState();
         this.toggleSettings();

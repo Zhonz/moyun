@@ -123,7 +123,10 @@ class StateManager {
                 template: null,
                 timestamp: null
             },
-            cachedModels: {}
+            cachedModels: {},
+            // 思考模式相关
+            enableThinking: false, // 是否启用思考模式
+            showThinking: false    // 是否显示思考内容
         };
     }
 
@@ -176,16 +179,18 @@ class StateManager {
             if (persistentData && Object.keys(persistentData).length > 0) {
                 // 从持久化存储加载
                 this.state = {
-                    ...this.getDefaultState(),
-                    provider: persistentData.provider || this.state.provider,
-                    model: persistentData.model || this.state.model,
-                    apiKeys: persistentData.apiKeys || this.state.apiKeys,
-                    customEndpoints: persistentData.customEndpoints || this.state.customEndpoints,
-                    theme: persistentData.theme || this.state.theme,
-                    cachedModels: persistentData.cachedModels || this.state.cachedModels,
-                    favorites: persistentData.favorites || [],
-                    customTemplates: persistentData.customTemplates || []
-                };
+                ...this.getDefaultState(),
+                provider: persistentData.provider || this.state.provider,
+                model: persistentData.model || this.state.model,
+                apiKeys: persistentData.apiKeys || this.state.apiKeys,
+                customEndpoints: persistentData.customEndpoints || this.state.customEndpoints,
+                theme: persistentData.theme || this.state.theme,
+                cachedModels: persistentData.cachedModels || this.state.cachedModels,
+                favorites: persistentData.favorites || [],
+                customTemplates: persistentData.customTemplates || [],
+                enableThinking: persistentData.enableThinking !== undefined ? persistentData.enableThinking : false,
+                showThinking: persistentData.showThinking !== undefined ? persistentData.showThinking : false
+            };
                 // 兼容旧版本的单个apiKey
                 if (persistentData.apiKey && !this.state.apiKeys[this.state.provider]) {
                     this.state.apiKeys[this.state.provider] = persistentData.apiKey;
@@ -251,7 +256,9 @@ class StateManager {
                     theme: this.state.theme,
                     cachedModels: this.state.cachedModels,
                     favorites: this.state.favorites,
-                    customTemplates: this.state.customTemplates
+                    customTemplates: this.state.customTemplates,
+                    enableThinking: this.state.enableThinking,
+                    showThinking: this.state.showThinking
                 });
             } catch (e) {
                 console.error('保存到持久化存储失败:', e);
@@ -268,7 +275,9 @@ class StateManager {
             favorites: this.state.favorites,
             customTemplates: this.state.customTemplates,
             theme: this.state.theme,
-            cachedModels: this.state.cachedModels
+            cachedModels: this.state.cachedModels,
+            enableThinking: this.state.enableThinking,
+            showThinking: this.state.showThinking
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
     }
@@ -286,7 +295,9 @@ class StateManager {
                 theme: this.state.theme,
                 cachedModels: this.state.cachedModels,
                 favorites: this.state.favorites,
-                customTemplates: this.state.customTemplates
+                customTemplates: this.state.customTemplates,
+                enableThinking: this.state.enableThinking,
+                showThinking: this.state.showThinking
             });
         } catch (e) {
             console.error('保存到持久化存储失败:', e);
