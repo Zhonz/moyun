@@ -405,6 +405,9 @@ class InkverseApp {
         return await this.makeAPICall(messages);
     }
 
+    // 防抖定时器
+    _draftSaveTimer: null,
+    
     autoSaveDraft() {
         setInterval(() => {
             this.saveDraft();
@@ -417,13 +420,20 @@ class InkverseApp {
         
         const content = promptInput.value.trim();
         if (content && content.length > 10) {
-            stateManager.set('draft', {
-                content: content,
-                template: this.state.currentTemplate?.id || null,
-                timestamp: Date.now()
-            });
-            this.state.draft = stateManager.get('draft');
-            this.saveState();
+            // 清除之前的定时器
+            if (this._draftSaveTimer) {
+                clearTimeout(this._draftSaveTimer);
+            }
+            // 使用防抖，延迟保存
+            this._draftSaveTimer = setTimeout(() => {
+                stateManager.set('draft', {
+                    content: content,
+                    template: this.state.currentTemplate?.id || null,
+                    timestamp: Date.now()
+                });
+                this.state.draft = stateManager.get('draft');
+                this.saveState();
+            }, 500);
         }
     }
 
@@ -759,9 +769,13 @@ class InkverseApp {
         });
 
         const promptInput = document.getElementById('prompt-input');
-        promptInput?.addEventListener('input', () => {
+        // 移除之前的监听器（如果存在）以避免重复绑定
+        promptInput?.removeEventListener('input', this._promptInputHandler);
+        // 使用箭头函数保持this引用
+        this._promptInputHandler = (e) => {
             this.saveDraft();
-        });
+        };
+        promptInput?.addEventListener('input', this._promptInputHandler);
 
         document.getElementById('refresh-models-btn')?.addEventListener('click', () => {
             this.fetchModelsFromAPI();
