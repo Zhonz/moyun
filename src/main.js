@@ -14,7 +14,7 @@ class InkverseApp {
         this._historyCurrentPage = 0;
         this._lastHistorySearchQuery = '';
         this._initialized = false;
-        this._draftSaveTimer = null;
+        this._autoSaveInterval = null;
 
         this.initApp();
     }
@@ -423,7 +423,10 @@ class InkverseApp {
     }
 
     autoSaveDraft() {
-        setInterval(() => {
+        if (this._autoSaveInterval) {
+            clearInterval(this._autoSaveInterval);
+        }
+        this._autoSaveInterval = setInterval(() => {
             this.saveDraft();
         }, 5000);
     }
@@ -434,20 +437,13 @@ class InkverseApp {
         
         const content = promptInput.value.trim();
         if (content && content.length > 10) {
-            // 清除之前的定时器
-            if (this._draftSaveTimer) {
-                clearTimeout(this._draftSaveTimer);
-            }
-            // 使用防抖，延迟保存
-            this._draftSaveTimer = setTimeout(() => {
-                stateManager.set('draft', {
-                    content: content,
-                    template: this.state.currentTemplate?.id || null,
-                    timestamp: Date.now()
-                });
-                this.state.draft = stateManager.get('draft');
-                this.saveState();
-            }, 500);
+            stateManager.set('draft', {
+                content: content,
+                template: this.state.currentTemplate?.id || null,
+                timestamp: Date.now()
+            });
+            this.state.draft = stateManager.get('draft');
+            this.saveState();
         }
     }
 
@@ -787,7 +783,16 @@ class InkverseApp {
         promptInput?.removeEventListener('input', this._promptInputHandler);
         // 使用箭头函数保持this引用
         this._promptInputHandler = (e) => {
+            // 保存光标位置
+            const start = promptInput.selectionStart;
+            const end = promptInput.selectionEnd;
+            
             this.saveDraft();
+            
+            // 恢复光标位置
+            requestAnimationFrame(() => {
+                promptInput.setSelectionRange(start, end);
+            });
         };
         promptInput?.addEventListener('input', this._promptInputHandler);
 
