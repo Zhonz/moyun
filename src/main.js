@@ -75,7 +75,28 @@ class InkverseApp {
         } else if (pageName === 'profile') {
             this.renderStats()
             this.loadApiSettingsUI()
+        } else if (pageName === 'create') {
+            // Only reset if not currently writing or editing
+            if (!this.isWriting && !this.currentNovelId) {
+                this.resetCreatePage()
+            }
         }
+    }
+
+    resetCreatePage() {
+        this.currentNovelId = null
+        this.currentNovel = null
+        this.setCreateStep('step-info')
+        const titleInput = document.getElementById('novel-title')
+        const hintInput = document.getElementById('novel-genre-hint')
+        if (titleInput) titleInput.value = ''
+        if (hintInput) hintInput.value = ''
+        const outlineText = document.getElementById('outline-text')
+        const foreshadowingText = document.getElementById('foreshadowing-text')
+        const writingStyleText = document.getElementById('writing-style-text')
+        if (outlineText) outlineText.textContent = ''
+        if (foreshadowingText) foreshadowingText.textContent = ''
+        if (writingStyleText) writingStyleText.textContent = ''
     }
 
     // ========== Bookshelf Page ==========
@@ -239,15 +260,30 @@ class InkverseApp {
             return
         }
 
-        // Create novel in store
-        const novel = await novelStore.createNovel({
-            title,
-            genre: this.currentGenre,
-            targetChapters: this.currentTargetChapters,
-            genreHint: genreHint || '',
-            cover: BOOK_EMOJIS[Math.abs(this.hashString(title)) % BOOK_EMOJIS.length],
-            status: 'outlining'
-        })
+        // Create or update novel in store
+        let novel
+        const existingNovel = this.currentNovelId ? await novelStore.getNovel(this.currentNovelId) : null
+
+        if (existingNovel) {
+            // Update existing novel
+            novel = await novelStore.updateNovel(existingNovel.id, {
+                title,
+                genre: this.currentGenre,
+                targetChapters: this.currentTargetChapters,
+                genreHint: genreHint || '',
+                status: 'outlining'
+            })
+        } else {
+            // Create new novel
+            novel = await novelStore.createNovel({
+                title,
+                genre: this.currentGenre,
+                targetChapters: this.currentTargetChapters,
+                genreHint: genreHint || '',
+                cover: BOOK_EMOJIS[Math.abs(this.hashString(title)) % BOOK_EMOJIS.length],
+                status: 'outlining'
+            })
+        }
 
         this.currentNovelId = novel.id
         this.isGenerating = true
