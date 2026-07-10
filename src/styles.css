@@ -282,6 +282,104 @@ body.dark-theme .page-header {
   margin-bottom: 16px;
 }
 
+.book-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.book-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.book-status {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.book-status.done {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10B981;
+}
+
+.book-status.writing {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3B82F6;
+  animation: statusPulse 2s infinite;
+}
+
+.book-status.paused {
+  background: rgba(107, 114, 128, 0.1);
+  color: #6B7280;
+}
+
+.book-status.outline {
+  background: rgba(139, 92, 246, 0.1);
+  color: #8B5CF6;
+}
+
+@keyframes statusPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.book-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: var(--font-ui);
+}
+
+.book-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.book-action-btn {
+  flex: 1;
+  padding: 5px 8px;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 500;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-alt);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.book-action-btn:hover {
+  background: var(--border);
+}
+
+.book-action-btn.resume-btn {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #FFFFFF;
+}
+
+.book-action-btn.edit-btn {
+  border-color: #8B5CF6;
+  background: #8B5CF6;
+  color: #FFFFFF;
+}
+
+.book-action-btn.delete-btn:hover {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
 /* --- Create Page --- */
 .create-steps {
   display: flex;

@@ -4,7 +4,7 @@
  */
 
 const NOVEL_DB_NAME = 'inkverse_novels';
-const NOVEL_DB_VERSION = 1;
+const NOVEL_DB_VERSION = 2;
 const NOVELS_STORE = 'novels';
 const CHAPTERS_STORE = 'chapters';
 
@@ -27,17 +27,25 @@ class NovelStore {
 
             request.onupgradeneeded = (event) => {
                 const db = event.target.result;
+                const oldVersion = event.oldVersion;
 
-                if (!db.objectStoreNames.contains(NOVELS_STORE)) {
-                    const novelStore = db.createObjectStore(NOVELS_STORE, { keyPath: 'id' });
-                    novelStore.createIndex('updatedAt', 'updatedAt', { unique: false });
-                    novelStore.createIndex('status', 'status', { unique: false });
+                if (oldVersion < 1) {
+                    if (!db.objectStoreNames.contains(NOVELS_STORE)) {
+                        const novelStore = db.createObjectStore(NOVELS_STORE, { keyPath: 'id' });
+                        novelStore.createIndex('updatedAt', 'updatedAt', { unique: false });
+                        novelStore.createIndex('status', 'status', { unique: false });
+                    }
+
+                    if (!db.objectStoreNames.contains(CHAPTERS_STORE)) {
+                        const chapterStore = db.createObjectStore(CHAPTERS_STORE, { keyPath: 'id' });
+                        chapterStore.createIndex('novelId', 'novelId', { unique: false });
+                        chapterStore.createIndex('novelId_index', ['novelId', 'index'], { unique: true });
+                    }
                 }
 
-                if (!db.objectStoreNames.contains(CHAPTERS_STORE)) {
-                    const chapterStore = db.createObjectStore(CHAPTERS_STORE, { keyPath: 'id' });
-                    chapterStore.createIndex('novelId', 'novelId', { unique: false });
-                    chapterStore.createIndex('novelId_index', ['novelId', 'index'], { unique: true });
+                if (oldVersion < 2) {
+                    // 升级：添加更多字段（通过cursor更新现有记录）
+                    // 新字段会在读写时自动添加，这里主要确保索引存在
                 }
             };
         });
@@ -60,14 +68,19 @@ class NovelStore {
             outline: novelData.outline || '',
             foreshadowing: novelData.foreshadowing || '',
             writingStyle: novelData.writingStyle || '',
-            genre: novelData.genre || 'medium', // short/medium/long/ultra
+            genre: novelData.genre || 'medium',
             targetChapters: novelData.targetChapters || 30,
             genreHint: novelData.genreHint || '',
             createdAt: Date.now(),
             updatedAt: Date.now(),
-            status: 'outlining', // outlining/writing/completed
+            status: 'outlining',
             currentChapter: 0,
-            totalWords: 0
+            totalWords: 0,
+            userPrompt: novelData.userPrompt || '',
+            outlinePrompt: novelData.outlinePrompt || '',
+            lastGeneratedContent: '',
+            lastReadChapter: 0,
+            autoContinue: false
         };
 
         return new Promise((resolve, reject) => {
@@ -241,6 +254,11 @@ class NovelStore {
             completedChapters: completedChapters.length,
             totalWords
         };
+    }
+
+    async getActiveWritingNovel() {
+        const novels = await this.getAllNovels();
+        return novels.find(n => n.status === 'writing' && n.autoContinue) || null;
     }
 }
 

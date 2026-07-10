@@ -32,6 +32,7 @@ class InkverseApp {
         this.initUI()
         this.bindEvents()
         this.checkConsent()
+        this.checkAndResumeWriting()
     }
 
     async loadState() {
@@ -106,21 +107,51 @@ class InkverseApp {
                 ? Math.round((stats.completedChapters / novel.targetChapters) * 100)
                 : 0
             const wordCount = this.formatWordCount(stats.totalWords)
+            const isWriting = novel.status === 'writing'
+            const hasGenerating = isWriting && (novel.autoContinue || stats.completedChapters < novel.targetChapters)
+
+            let statusBadge = ''
+            let actionButtons = ''
+
+            if (novel.status === 'completed') {
+                statusBadge = '<span class="book-status done">已完成</span>'
+            } else if (novel.status === 'writing') {
+                statusBadge = `<span class="book-status ${novel.autoContinue ? 'writing' : 'paused'}">${novel.autoContinue ? '生成中' : '已暂停'}</span>`
+                actionButtons = `
+                    <div class="book-actions">
+                        <button class="book-action-btn resume-btn" data-resume-id="${novel.id}">${novel.autoContinue ? '继续' : '继续生成'}</button>
+                        <button class="book-action-btn delete-btn" data-delete-id="${novel.id}">删除</button>
+                    </div>
+                `
+            } else if (novel.status === 'outlining') {
+                statusBadge = '<span class="book-status outline">大纲中</span>'
+                actionButtons = `
+                    <div class="book-actions">
+                        <button class="book-action-btn edit-btn" data-edit-id="${novel.id}">继续编辑</button>
+                        <button class="book-action-btn delete-btn" data-delete-id="${novel.id}">删除</button>
+                    </div>
+                `
+            }
 
             return `
                 <div class="book-item" data-novel-id="${novel.id}">
                     <div class="book-cover" style="background:${novel.coverColor || '#3B82F6'}">
                         <span class="book-cover-title">${emoji} ${this.escapeHtml(novel.title)}</span>
                     </div>
-                    <div class="book-title">${this.escapeHtml(novel.title)}</div>
-                    <div class="book-progress">
-                        <div class="book-progress-fill" style="width:${progress}%"></div>
+                    <div class="book-info">
+                        <div class="book-title-row">
+                            <div class="book-title">${this.escapeHtml(novel.title)}</div>
+                            ${statusBadge}
+                        </div>
+                        <div class="book-progress">
+                            <div class="book-progress-fill" style="width:${progress}%"></div>
+                        </div>
+                        <div class="book-meta">
+                            <span>${stats.completedChapters}/${novel.targetChapters}章</span>
+                            <span>${wordCount}字</span>
+                        </div>
+                        ${actionButtons}
                     </div>
-                    <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);font-family:var(--font-ui);">
-                        <span>${stats.completedChapters}/${novel.targetChapters}章</span>
-                        <span>${wordCount}字</span>
-                    </div>
-                    <button class="book-delete-btn" data-delete-id="${novel.id}" title="删除">✕</button>
                 </div>
             `
         }))
@@ -129,7 +160,19 @@ class InkverseApp {
 
         container.querySelectorAll('.book-item').forEach(item => {
             const novelId = item.dataset.novelId
-            const deleteBtn = item.querySelector('.book-delete-btn')
+            const resumeBtn = item.querySelector('.resume-btn')
+            const editBtn = item.querySelector('.edit-btn')
+            const deleteBtn = item.querySelector('.delete-btn')
+
+            resumeBtn?.addEventListener('click', (e) => {
+                e.stopPropagation()
+                this.resumeWriting(novelId)
+            })
+
+            editBtn?.addEventListener('click', (e) => {
+                e.stopPropagation()
+                this.openNovelForEdit(novelId)
+            })
 
             deleteBtn?.addEventListener('click', async (e) => {
                 e.stopPropagation()
@@ -141,7 +184,7 @@ class InkverseApp {
             })
 
             item.addEventListener('click', (e) => {
-                if (e.target.closest('.book-delete-btn')) return
+                if (e.target.closest('.book-actions')) return
                 this.openReader(novelId, -1)
             })
         })
@@ -313,9 +356,9 @@ class InkverseApp {
         this.renderChapterList()
     }
 
-    async startWriting() {
+    async startWriting(fromChapterIndex = null) {
         if (this.isWriting) {
-            this.showToast('正在写作中，请等待当前章节完成', 'error')
+            this.showToast('正在写作中...', 'error')
             return
         }
 
@@ -332,21 +375,31 @@ class InkverseApp {
 
         this.isWriting = true
         this._abortWriting = false
+        this._writingNovelId = novel.id
+        this.updateWritingButtonState(true)
+
+        await novelStore.updateNovel(novel.id, { autoContinue: true })
 
         const chapters = await novelStore.getChaptersByNovelId(novel.id)
 
-        for (let i = 0; i < chapters.length; i++) {
+        let startIndex = 0
+        if (fromChapterIndex !== null) {
+            startIndex = fromChapterIndex
+        } else {
+            const firstPendingIndex = chapters.findIndex(c => c.status === 'pending' || c.status === 'generating')
+            if (firstPendingIndex >= 0) startIndex = firstPendingIndex
+        }
+
+        for (let i = startIndex; i < chapters.length; i++) {
             if (this._abortWriting) break
 
             const chapter = chapters[i]
             if (chapter.status === 'completed') continue
 
-            // Update status to generating
             await novelStore.updateChapter(chapter.id, { status: 'generating' })
             this.renderChapterList()
             this.updateWritingProgress(i, chapters.length)
 
-            // Build prompt with FRESH session (no conversation history)
             const previousChapterSummary = await this.getPreviousChapterSummary(novel.id, i)
             const chapterTitle = `第${i + 1}章`
 
@@ -376,31 +429,45 @@ ${previousChapterSummary}
                 { role: 'user', content: prompt }
             ]
 
-            try {
-                const content = await this.callAIWithStreaming(messages, () => {})
+            let accumulatedContent = ''
+            const currentChapterId = chapter.id
 
-                await novelStore.updateChapter(chapter.id, {
-                    status: 'completed',
-                    content: content,
-                    wordCount: content.length
+            try {
+                const content = await this.callAIWithStreaming(messages, (chunk) => {
+                    if (this._abortWriting) return
+                    accumulatedContent += chunk
+                    novelStore.updateChapter(currentChapterId, {
+                        content: accumulatedContent,
+                        wordCount: accumulatedContent.length
+                    }).catch(() => {})
+                    this._currentWritingChapter = i
+                    this.renderChapterList()
                 })
 
-                // Extract chapter title from content if present
                 const titleMatch = content.match(/\{(.+?)\}/)
-                if (titleMatch) {
-                    await novelStore.updateChapter(chapter.id, { title: titleMatch[1] })
-                }
+                const finalTitle = titleMatch ? titleMatch[1] : chapterTitle
 
-                // Update novel stats
+                await novelStore.updateChapter(currentChapterId, {
+                    status: 'completed',
+                    content: content,
+                    wordCount: content.length,
+                    title: finalTitle
+                })
+
                 const stats = await novelStore.getNovelStats(novel.id)
                 await novelStore.updateNovel(novel.id, {
                     currentChapter: i + 1,
-                    totalWords: stats.totalWords
+                    totalWords: stats.totalWords,
+                    lastGeneratedContent: content.slice(-200)
                 })
 
             } catch (e) {
+                if (this._abortWriting) {
+                    await novelStore.updateChapter(currentChapterId, { status: 'pending' })
+                    break
+                }
                 this.showToast(`第${i + 1}章生成失败：${e.message}`, 'error')
-                await novelStore.updateChapter(chapter.id, { status: 'pending' })
+                await novelStore.updateChapter(currentChapterId, { status: 'pending' })
                 this.isWriting = false
                 this.renderChapterList()
                 return
@@ -411,13 +478,132 @@ ${previousChapterSummary}
         }
 
         this.isWriting = false
+        this._writingNovelId = null
+        this.updateWritingButtonState(false)
 
-        // Check if all chapters completed
+        await novelStore.updateNovel(novel.id, { autoContinue: false })
+
         const finalStats = await novelStore.getNovelStats(novel.id)
         if (finalStats.completedChapters >= novel.targetChapters) {
-            await novelStore.updateNovel(novel.id, { status: 'completed' })
+            await novelStore.updateNovel(novel.id, { status: 'completed', autoContinue: false })
             this.showToast('🎉 小说创作完成！')
         }
+    }
+
+    stopWriting() {
+        this._abortWriting = true
+        this.isWriting = false
+        if (this._writingNovelId) {
+            novelStore.updateNovel(this._writingNovelId, { autoContinue: false }).catch(() => {})
+        }
+        this.updateWritingButtonState(false)
+        this.showToast('已暂停生成')
+    }
+
+    updateWritingButtonState(isWriting) {
+        const startBtn = document.getElementById('start-writing-btn')
+        const stopBtn = document.getElementById('stop-writing-btn')
+        if (startBtn) startBtn.style.display = isWriting ? 'none' : 'inline-flex'
+        if (stopBtn) stopBtn.style.display = isWriting ? 'inline-flex' : 'none'
+    }
+
+    async resumeWriting(novelId) {
+        const novel = await novelStore.getNovel(novelId)
+        if (!novel) return
+
+        this.currentNovelId = novelId
+        this.currentNovel = novel
+        this.switchPage('create')
+        this.setCreateStep('step-writing')
+        this.renderChapterList()
+
+        const chapters = await novelStore.getChaptersByNovelId(novelId)
+        const firstPendingIndex = chapters.findIndex(c => c.status === 'pending' || c.status === 'generating')
+
+        if (firstPendingIndex < 0) {
+            this.showToast('所有章节已完成', 'success')
+            return
+        }
+
+        this.startWriting(firstPendingIndex)
+    }
+
+    async openNovelForEdit(novelId) {
+        const novel = await novelStore.getNovel(novelId)
+        if (!novel) return
+
+        this.currentNovelId = novelId
+        this.currentNovel = novel
+        this.switchPage('create')
+
+        document.getElementById('novel-title').value = novel.title
+        document.getElementById('novel-genre-hint').value = novel.genreHint || ''
+
+        document.querySelectorAll('.genre-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.genre === novel.genre)
+        })
+        this.currentGenre = novel.genre
+        this.currentTargetChapters = novel.targetChapters
+
+        if (novel.status === 'outlining') {
+            this.setCreateStep('step-info')
+        } else {
+            this.setCreateStep('step-outline')
+            document.getElementById('outline-loading').style.display = 'none'
+            document.getElementById('outline-content').style.display = 'block'
+            document.getElementById('outline-actions').style.display = 'flex'
+            document.getElementById('outline-text').textContent = novel.outline || '（暂无大纲）'
+            document.getElementById('foreshadowing-text').textContent = novel.foreshadowing || '（暂无伏笔设计）'
+            document.getElementById('writing-style-text').textContent = novel.writingStyle || '（暂无写法说明）'
+        }
+    }
+
+    async checkAndResumeWriting() {
+        const activeNovel = await novelStore.getActiveWritingNovel()
+        if (activeNovel) {
+            this.showToast('检测到未完成的生成，正在恢复...')
+            setTimeout(() => {
+                this.resumeWriting(activeNovel.id)
+            }, 1000)
+        }
+    }
+
+    async continueNovel(novelId) {
+        const novel = await novelStore.getNovel(novelId)
+        if (!novel) return
+
+        if (novel.status === 'completed') {
+            this.showToast('小说已完成，如需续写请先扩展章节', 'error')
+            return
+        }
+
+        this.resumeWriting(novelId)
+    }
+
+    async extendNovelChapters(novelId, additionalChapters) {
+        const novel = await novelStore.getNovel(novelId)
+        if (!novel) return
+
+        const currentChapters = await novelStore.getChaptersByNovelId(novelId)
+        const startIndex = currentChapters.length
+
+        for (let i = 0; i < additionalChapters; i++) {
+            await novelStore.createChapter({
+                novelId: novel.id,
+                index: startIndex + i,
+                title: `第${startIndex + i + 1}章`,
+                status: 'pending',
+                content: ''
+            })
+        }
+
+        await novelStore.updateNovel(novel.id, {
+            targetChapters: novel.targetChapters + additionalChapters,
+            status: 'writing'
+        })
+
+        this.renderBookshelf()
+        this.showToast(`已添加${additionalChapters}章`)
     }
 
     async getPreviousChapterSummary(novelId, currentChapterIndex) {
@@ -1119,6 +1305,13 @@ ${summary}`
         // Start writing button
         document.getElementById('start-writing-btn')?.addEventListener('click', () => {
             this.startWriting()
+            this.updateWritingButtonState(true)
+        })
+
+        // Stop writing button
+        document.getElementById('stop-writing-btn')?.addEventListener('click', () => {
+            this.stopWriting()
+            this.updateWritingButtonState(false)
         })
 
         // Go to bookshelf button
