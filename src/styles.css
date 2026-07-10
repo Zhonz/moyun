@@ -348,21 +348,20 @@ body::before {
 .result-content .novel-title {
     display: block;
     font-family: var(--font-display);
-    font-size: 22px;
-    font-weight: 700;
-    color: var(--gold);
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--silk-gray);
     text-align: center;
-    margin: 16px 0 20px;
-    padding: 12px 0;
-    border-bottom: 2px solid var(--gold);
-    letter-spacing: 2px;
+    margin: 20px 0;
+    padding: 10px 0;
+    letter-spacing: 1px;
 }
 
 /* 分隔线 */
 .result-content .chapter-divider {
     display: block;
     text-align: center;
-    margin: 24px 0;
+    margin: 20px 0;
     color: var(--ink-wash);
     font-size: 14px;
 }
@@ -375,13 +374,13 @@ body::before {
 
 /* 对话样式 */
 .result-content .dialogue {
-    color: var(--jade);
+    color: var(--rice-white);
 }
 
 /* 强调文字 */
 .result-content .emphasis {
-    font-weight: 600;
-    color: var(--gold);
+    font-weight: 500;
+    color: var(--rice-white);
 }
 
 /* Thinking Content Styling */
