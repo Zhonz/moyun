@@ -65,7 +65,7 @@ class InkverseApp {
     }
 
     applyTheme() {
-        document.body.classList.toggle('light-theme', this.state.theme === 'dark' ? false : this.state.theme === 'light');
+        document.body.classList.toggle('dark-theme', this.state.theme === 'dark');
     }
 
     toggleTheme() {
@@ -926,14 +926,14 @@ class InkverseApp {
             </div>
             <style>
                 .streaming-content {
-                    padding: 16px; background: var(--charcoal); border: 1px solid var(--gold-dim);
+                    padding: 16px; background: var(--charcoal); border: 1px solid var(--slate);
                     border-radius: 12px; font-family: var(--font-body); font-size: 15px;
                     line-height: 1.9; white-space: pre-wrap; color: var(--rice-white);
                     min-height: 100px;
                 }
                 .streaming-cursor {
                     display: inline-block;
-                    color: var(--gold);
+                    color: var(--primary);
                     animation: cursor-blink 0.8s infinite;
                 }
                 @keyframes cursor-blink {
