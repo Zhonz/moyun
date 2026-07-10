@@ -957,10 +957,42 @@ class InkverseApp {
         }
     }
 
+    // 解析文本中的标题格式 {标题或章节}
+    parseNovelFormat(text) {
+        if (!text) return text;
+
+        // 将文本按行处理
+        let lines = text.split('\n');
+        let processedLines = lines.map(line => {
+            // 匹配 {标题} 或 {章节} 等格式
+            const titleMatch = line.match(/^\s*\{(.+?)\}\s*$/);
+            if (titleMatch) {
+                // 转换为章节标题HTML
+                return `<div class="chapter-title">${titleMatch[1]}</div>`;
+            }
+
+            // 处理对话（引号内容）
+            line = line.replace(/"([^"]+)"/g, '<span class="dialogue">"$1"</span>');
+
+            // 处理段落缩进
+            if (line.trim() && !line.startsWith('<')) {
+                // 如果不是空行且不是HTML标签，添加段落
+                line = `<p>${line}</p>`;
+            }
+
+            return line;
+        });
+
+        return processedLines.join('\n');
+    }
+
     displayResult(result, title) {
+        // 解析小说格式
+        const formattedResult = this.parseNovelFormat(result);
+
         document.getElementById('result').innerHTML = `
             <div class="result-title">✨ ${title}</div>
-            <div class="result-content">${result}</div>
+            <div class="result-content">${formattedResult}</div>
             <div class="result-actions">
                 <button class="result-action-btn" id="copy-btn">📋 复制</button>
                 <button class="result-action-btn" id="save-txt-btn">💾 保存为TXT</button>
@@ -968,7 +1000,7 @@ class InkverseApp {
                 <button class="result-action-btn" id="share-btn">🔗 分享</button>
             </div>
         `;
-        
+
         document.getElementById('copy-btn')?.addEventListener('click', () => this.copyResult());
         document.getElementById('save-txt-btn')?.addEventListener('click', () => this.saveResult('txt'));
         document.getElementById('save-md-btn')?.addEventListener('click', () => this.saveResult('md'));
@@ -989,7 +1021,13 @@ class InkverseApp {
 
         try {
             // 将原文本发送给AI，让AI在已生成文本的基础上续写
-            const continuationPrompt = `请续写以下文本，保持相同的风格、语调和叙事连续性。只输出续写内容，不要重复已写部分。\n\n=== 原文 ===\n${this.state.currentResult}\n=== 续写开始 ===`;
+            const formatReminder = `\n\n【格式提醒】：
+请继续使用小说标准格式：
+1. 如果需要新章节或小节，使用 {标题内容} 格式
+2. 标题单独成行
+3. 对话使用双引号包裹`;
+
+            const continuationPrompt = `请续写以下文本，保持相同的风格、语调和叙事连续性。只输出续写内容，不要重复已写部分。${formatReminder}\n\n=== 原文 ===\n${this.state.currentResult}\n=== 续写开始 ===`;
             const continuation = await this.callAIWithStreaming(continuationPrompt, (chunk) => {
                 this.updateStreamingResult(chunk);
             });
@@ -1020,14 +1058,14 @@ class InkverseApp {
     async callAI(userPrompt) {
         const style = WRITING_STYLES[this.state.style].prompt;
         const length = OUTPUT_LENGTHS[this.state.length];
-        
+
         let prompt = '';
         if (this.state.currentTemplate) {
             prompt = this.templateManager.applyTemplate(this.state.currentTemplate, userPrompt);
         } else {
             prompt = userPrompt;
         }
-        
+
         let genreHint = '';
         if (this.state.currentTemplate && this.state.currentTemplate.id) {
             const template = this.state.currentTemplate;
@@ -1035,14 +1073,22 @@ class InkverseApp {
             const categoryName = this.templateManager.getTemplateCategoryName(template);
             genreHint = `\n\n【创作题材】：${categoryName} - ${templateName}`;
         }
-        
-        const fullPrompt = `${style}${genreHint}\n\n请生成 ${length.min}-${length.max} 字的内容。\n\n${prompt}`;
-        
+
+        // 标题格式指导
+        const formatGuide = `\n\n【格式要求】：
+请使用小说标准格式进行创作：
+1. 章节标题、小节标题请使用 {标题内容} 格式，例如：{第一章 初遇} 或 {一、风起云涌}
+2. 标题需要单独成行
+3. 对话请使用双引号包裹
+4. 段落请自然分段`;
+
+        const fullPrompt = `${style}${genreHint}${formatGuide}\n\n请生成 ${length.min}-${length.max} 字的内容。\n\n${prompt}`;
+
         const messages = [
             { role: 'system', content: '你是一位才华横溢的文学创作助手，精通各种文体。请用优美的中文进行创作。' },
             { role: 'user', content: fullPrompt }
         ];
-        
+
         stateManager.set('conversationHistory', [...messages]);
         this.state.conversationHistory = messages;
         return await this.makeAPICall(messages);
@@ -1051,14 +1097,14 @@ class InkverseApp {
     async callAIWithStreaming(userPrompt, onChunk) {
         const style = WRITING_STYLES[this.state.style].prompt;
         const length = OUTPUT_LENGTHS[this.state.length];
-        
+
         let prompt = '';
         if (this.state.currentTemplate) {
             prompt = this.templateManager.applyTemplate(this.state.currentTemplate, userPrompt);
         } else {
             prompt = userPrompt;
         }
-        
+
         let genreHint = '';
         if (this.state.currentTemplate && this.state.currentTemplate.id) {
             const template = this.state.currentTemplate;
@@ -1066,14 +1112,22 @@ class InkverseApp {
             const categoryName = this.templateManager.getTemplateCategoryName(template);
             genreHint = `\n\n【创作题材】：${categoryName} - ${templateName}`;
         }
-        
-        const fullPrompt = `${style}${genreHint}\n\n请生成 ${length.min}-${length.max} 字的内容。\n\n${prompt}`;
-        
+
+        // 标题格式指导
+        const formatGuide = `\n\n【格式要求】：
+请使用小说标准格式进行创作：
+1. 章节标题、小节标题请使用 {标题内容} 格式，例如：{第一章 初遇} 或 {一、风起云涌}
+2. 标题需要单独成行
+3. 对话请使用双引号包裹
+4. 段落请自然分段`;
+
+        const fullPrompt = `${style}${genreHint}${formatGuide}\n\n请生成 ${length.min}-${length.max} 字的内容。\n\n${prompt}`;
+
         const messages = [
             { role: 'system', content: '你是一位才华横溢的文学创作助手，精通各种文体。请用优美的中文进行创作。' },
             { role: 'user', content: fullPrompt }
         ];
-        
+
         stateManager.set('conversationHistory', [...messages]);
         this.state.conversationHistory = messages;
         return await this.makeStreamingAPICall(messages, onChunk);
@@ -1113,7 +1167,7 @@ class InkverseApp {
             model: this.state.model,
             messages: messages,
             temperature: this.state.creativity,
-            max_tokens: 3000,
+            max_tokens: 8000,
             stream: true
         };
         
@@ -1208,7 +1262,7 @@ class InkverseApp {
         
         const requestBody = {
             model: this.state.model,
-            max_tokens: 2048,
+            max_tokens: 8192,
             stream: true,
             system: systemMessage?.content || '',
             messages: otherMessages
@@ -1339,7 +1393,7 @@ class InkverseApp {
                 model: this.state.model,
                 messages: messages,
                 temperature: this.state.creativity,
-                max_tokens: 3000
+                max_tokens: 8000
             })
         });
 
@@ -1368,7 +1422,7 @@ class InkverseApp {
             },
             body: JSON.stringify({
                 model: this.state.model,
-                max_tokens: 2048,
+                max_tokens: 8192,
                 system: systemMessage?.content || '',
                 messages: otherMessages
             })

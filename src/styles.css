@@ -326,11 +326,64 @@ body::before {
     font-family: var(--font-display); font-size: 18px; margin-bottom: 12px;
     color: var(--gold);
 }
+
+/* 小说阅读器样式 */
 .result-content {
-    padding: 16px; background: var(--charcoal); border: 1px solid var(--slate);
-    border-radius: 12px; font-family: var(--font-body); font-size: 15px;
-    line-height: 1.9; white-space: pre-wrap; color: var(--rice-white);
+    padding: 24px 20px;
+    background: var(--charcoal);
+    border: 1px solid var(--slate);
+    border-radius: 12px;
+    font-family: var(--font-body);
+    font-size: 17px;
+    line-height: 2.0;
+    white-space: pre-wrap;
+    color: var(--rice-white);
+    max-height: 70vh;
+    overflow-y: auto;
+    text-align: justify;
 }
+
+/* 章节标题样式 - {标题} 格式 */
+.result-content .chapter-title,
+.result-content .novel-title {
+    display: block;
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--gold);
+    text-align: center;
+    margin: 16px 0 20px;
+    padding: 12px 0;
+    border-bottom: 2px solid var(--gold);
+    letter-spacing: 2px;
+}
+
+/* 分隔线 */
+.result-content .chapter-divider {
+    display: block;
+    text-align: center;
+    margin: 24px 0;
+    color: var(--ink-wash);
+    font-size: 14px;
+}
+
+/* 段落缩进 */
+.result-content p {
+    text-indent: 2em;
+    margin: 0.5em 0;
+}
+
+/* 对话样式 */
+.result-content .dialogue {
+    color: var(--jade);
+}
+
+/* 强调文字 */
+.result-content .emphasis {
+    font-weight: 600;
+    color: var(--gold);
+}
+
 /* Thinking Content Styling */
 .thinking-content {
     display: block;
