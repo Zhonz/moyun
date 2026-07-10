@@ -3,281 +3,262 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="theme-color" content="#0D0D0F">
+    <meta name="theme-color" content="#FAFBFC">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>墨韵 AI - 专注AI创作</title>
-    <!-- 字体预加载 -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <title>墨韵 - AI小说创作与阅读</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=ZCOOL+XiaoWei&family=Noto+Serif+SC:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap">
-    <link href="https://fonts.googleapis.com/css2?family=ZCOOL+XiaoWei&family=Noto+Serif+SC:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <!-- CSS 文件结构 -->
-    <link rel="stylesheet" href="/src/styles/theme.css">
-    <link rel="stylesheet" href="/src/styles/base.css">
-    <link rel="stylesheet" href="/src/styles/components.css">
-    <link rel="stylesheet" href="/src/styles/animations.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="app">
-        <header class="header">
-            <div class="header-brand">
-                <div class="header-logo">墨</div>
-                <h1 class="header-title">墨韵 AI</h1>
+        <!-- 页面容器 -->
+        <div class="pages">
+            <!-- 书架页 -->
+            <div class="page page-bookshelf active" id="page-bookshelf">
+                <div class="page-header">
+                    <h1 class="page-title">书架</h1>
+                </div>
+                <div class="page-body" id="bookshelf-content">
+                    <!-- 动态渲染 -->
+                </div>
             </div>
-            <div class="header-actions">
-                <button class="icon-btn theme-toggle-btn" id="theme-toggle-btn" aria-label="切换主题">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="5"></circle>
-                        <line x1="12" y1="1" x2="12" y2="3"></line>
-                        <line x1="12" y1="21" x2="12" y2="23"></line>
-                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-                        <line x1="1" y1="12" x2="3" y2="12"></line>
-                        <line x1="21" y1="12" x2="23" y2="12"></line>
-                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-                    </svg>
-                </button>
-                <button class="icon-btn" id="settings-btn" aria-label="设置">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="3"></circle>
-                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-                    </svg>
-                </button>
-            </div>
-        </header>
 
-        <main class="main-content">
-            <section class="categories-section">
-                <div class="categories-scroll" id="categories">
-                </div>
-            </section>
-
-            <section class="templates-section">
-                <div class="templates-search-container">
-                    <div class="templates-search-wrapper">
-                        <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="11" cy="11" r="8"></circle>
-                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            <!-- 创作页 -->
+            <div class="page page-create" id="page-create">
+                <div class="page-header">
+                    <h1 class="page-title">创作</h1>
+                    <button class="icon-btn" id="settings-toggle-btn" aria-label="设置">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="3"></circle>
+                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
                         </svg>
-                        <input type="text" class="templates-search-input" id="templates-search" placeholder="搜索模板...">
-                    </div>
-                </div>
-                <div class="templates-grid" id="templates">
-                </div>
-            </section>
-
-            <section class="input-section">
-                <div class="mode-switch">
-                    <button class="mode-btn active" id="mode-create" data-mode="create">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M12 20h9"></path>
-                            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
-                        </svg>
-                        创作模式
-                    </button>
-                    <button class="mode-btn" id="mode-chat" data-mode="chat">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                        </svg>
-                        对话模式
                     </button>
                 </div>
-
-                <div class="create-panel" id="create-panel">
-                    <div class="options-row">
-                        <div class="options-group">
-                            <span class="options-label">风格</span>
-                            <div class="style-chips" id="style-select">
+                <div class="page-body">
+                    <!-- 创作步骤容器 -->
+                    <div id="create-steps">
+                        <!-- 步骤1：基本信息 -->
+                        <div class="create-step active" id="step-info">
+                            <div class="step-card">
+                                <div class="step-number">1</div>
+                                <h2 class="step-title">开始新小说</h2>
+                                <div class="form-field">
+                                    <label>小说名称</label>
+                                    <input type="text" id="novel-title" placeholder="给你的小说起个名字" maxlength="50">
+                                </div>
+                                <div class="form-field">
+                                    <label>题材描述</label>
+                                    <textarea id="novel-genre-hint" placeholder="描述你想写的故事...&#10;&#10;例如：一个发生在民国时期的悬疑故事，主角是一位落魄侦探" rows="4"></textarea>
+                                </div>
+                                <div class="form-field">
+                                    <label>篇幅</label>
+                                    <div class="genre-select" id="genre-select">
+                                        <button class="genre-btn" data-genre="short" data-chapters="20">
+                                            <span class="genre-label">短篇</span>
+                                            <span class="genre-desc">10-30章</span>
+                                        </button>
+                                        <button class="genre-btn active" data-genre="medium" data-chapters="50">
+                                            <span class="genre-label">中篇</span>
+                                            <span class="genre-desc">30-100章</span>
+                                        </button>
+                                        <button class="genre-btn" data-genre="long" data-chapters="150">
+                                            <span class="genre-label">长篇</span>
+                                            <span class="genre-desc">100+章</span>
+                                        </button>
+                                        <button class="genre-btn" data-genre="ultra" data-chapters="300">
+                                            <span class="genre-label">超长篇</span>
+                                            <span class="genre-desc">300+章</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                <button class="primary-btn" id="generate-outline-btn">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                                    生成大纲
+                                </button>
                             </div>
                         </div>
-                        <div class="options-group">
-                            <span class="options-label">长度</span>
-                            <div class="length-chips" id="length-select">
+
+                        <!-- 步骤2：大纲确认 -->
+                        <div class="create-step" id="step-outline">
+                            <div class="step-card">
+                                <div class="step-number">2</div>
+                                <h2 class="step-title">大纲与伏笔</h2>
+                                <div class="outline-section" id="outline-display">
+                                    <div class="outline-loading" id="outline-loading" style="display:none;">
+                                        <div class="spinner"></div>
+                                        <span>正在构思大纲...</span>
+                                    </div>
+                                    <div id="outline-content" style="display:none;">
+                                        <div class="outline-block">
+                                            <h3>故事大纲</h3>
+                                            <div id="outline-text" class="outline-text"></div>
+                                        </div>
+                                        <div class="outline-block">
+                                            <h3>伏笔设计</h3>
+                                            <div id="foreshadowing-text" class="outline-text"></div>
+                                        </div>
+                                        <div class="outline-block">
+                                            <h3>写法说明</h3>
+                                            <div id="writing-style-text" class="outline-text"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="step-actions" id="outline-actions" style="display:none;">
+                                    <button class="secondary-btn" id="regenerate-outline-btn">重新生成</button>
+                                    <button class="primary-btn" id="confirm-outline-btn">确认大纲，开始写作</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 步骤3：章节生成 -->
+                        <div class="create-step" id="step-writing">
+                            <div class="step-card">
+                                <div class="step-number">3</div>
+                                <h2 class="step-title">逐章创作</h2>
+                                <div class="writing-progress" id="writing-progress">
+                                    <div class="progress-bar">
+                                        <div class="progress-fill" id="progress-fill"></div>
+                                    </div>
+                                    <div class="progress-text" id="progress-text">准备中...</div>
+                                </div>
+                                <div class="chapter-list" id="chapter-list">
+                                    <!-- 动态渲染章节 -->
+                                </div>
+                                <div class="step-actions">
+                                    <button class="primary-btn" id="start-writing-btn">开始逐章生成</button>
+                                    <button class="secondary-btn" id="go-to-bookshelf-btn">去书架阅读</button>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <textarea class="prompt-input" id="prompt-input" placeholder="描述你的创作想法...&#10;&#10;例如：&#10;• 一个发生在民国时期的爱情故事&#10;• 主角是一个失意的作家&#10;• 描写雨夜中相遇的场景"></textarea>
-                    <div class="creativity-control">
-                        <span>创意程度</span>
-                        <span class="creativity-value" id="creativity-value">0.7</span>
-                    </div>
-                    <input type="range" class="creativity-slider" id="creativity-slider" min="0" max="1" step="0.1" value="0.7">
-                    <div class="thinking-control" style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
-                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                            <input type="checkbox" id="enable-thinking-toggle">
-                            <span>🧠 思考模式</span>
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                            <input type="checkbox" id="show-thinking-toggle">
-                            <span>👁️ 显示思考</span>
-                        </label>
-                    </div>
-                    <div class="actions-row">
-                        <button class="generate-btn" id="generate-btn">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-                            </svg>
-                            开始创作
-                        </button>
-                        <button class="continue-btn" id="continue-btn">续写</button>
-                        <button class="manage-templates-btn" id="manage-templates-btn">管理模板</button>
-                    </div>
-                    <div class="loading-indicator" id="loading-indicator" style="display: none;">
-                        <div class="spinner"></div>
-                        <span>正在创作中...</span>
-                    </div>
                 </div>
-
-                <div class="chat-panel" id="chat-panel" style="display: none;">
-                    <div class="chat-messages" id="chat-messages">
-                        <div class="chat-welcome">
-                            <div class="chat-avatar">墨</div>
-                            <div class="chat-message bot">
-                                你好！我是墨韵AI写作助手。我可以帮你创作小说、诗歌、文章，或者陪你讨论写作话题。有什么我可以帮你的吗？
-                            </div>
-                        </div>
-                    </div>
-                    <div class="chat-input-container">
-                        <textarea class="chat-input" id="chat-input" placeholder="输入你的问题或想法..." rows="1"></textarea>
-                        <button class="chat-send-btn" id="chat-send-btn">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <line x1="22" y1="2" x2="11" y2="13"></line>
-                                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-            </section>
-
-            <section class="output-section" id="result">
-            </section>
-
-            <section class="history-section">
-                <div class="history-header">
-                    <h3 class="history-title">历史创作</h3>
-                    <div class="history-actions-bar">
-                        <input type="text" class="search-input" id="search-input" placeholder="搜索历史...">
-                        <button class="batch-export-btn" id="batch-export-btn" title="批量导出">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                <polyline points="7 10 12 15 17 10"></polyline>
-                                <line x1="12" y1="15" x2="12" y2="3"></line>
-                            </svg>
-                            导出全部
-                        </button>
-                    </div>
-                </div>
-                <div class="history-list" id="history">
-                </div>
-            </section>
-        </main>
-
-        <div class="settings-panel" id="settings-panel">
-            <div class="settings-header">
-                <h2>API 设置</h2>
-                <button class="close-settings" id="close-settings">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                </button>
             </div>
-            <div class="settings-content">
-                <div class="form-group">
-                    <label>AI 提供商</label>
-                    <select id="provider-select">
-                        <option value="openai">OpenAI (GPT-4)</option>
-                        <option value="anthropic">Anthropic (Claude)</option>
-                        <option value="deepseek">DeepSeek</option>
-                        <option value="qwen">阿里千问</option>
-                        <option value="glm">智谱 AI</option>
-                        <option value="moonshot">月之暗面</option>
-                        <option value="doubao">字节豆包</option>
-                        <option value="yi">零一万物</option>
-                        <option value="custom">自定义 API</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>API Key</label>
-                    <input type="password" id="api-key" placeholder="sk-...">
-                </div>
-                <div class="form-group" id="custom-endpoint-group">
-                    <label>自定义端点</label>
-                    <input type="text" id="custom-endpoint" placeholder="https://api.example.com/v1/chat">
-                </div>
-                <div class="form-group">
-                    <label>模型</label>
-                    <div style="display: flex; gap: 8px;">
-                        <select id="model-select" style="flex: 1;">
-                        </select>
-                        <button class="refresh-models-btn" id="refresh-models-btn" title="刷新模型">🔄</button>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>自动获取模型</label>
-                    <button class="auto-fetch-models-btn" id="auto-fetch-models-btn">
-                        从提供商 API 获取模型列表
+
+            <!-- 我的页 -->
+            <div class="page page-profile" id="page-profile">
+                <div class="page-header">
+                    <h1 class="page-title">我的</h1>
+                    <button class="icon-btn" id="theme-toggle-btn" aria-label="切换主题">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <circle cx="12" cy="12" r="5"></circle>
+                            <line x1="12" y1="1" x2="12" y2="3"></line>
+                            <line x1="12" y1="21" x2="12" y2="23"></line>
+                            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                            <line x1="1" y1="12" x2="3" y2="12"></line>
+                            <line x1="21" y1="12" x2="23" y2="12"></line>
+                            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                        </svg>
                     </button>
-                    <div class="model-update-info" id="model-update-info" style="margin-top: 8px; font-size: 12px; color: var(--ink-wash);"></div>
                 </div>
-                <div class="form-group">
-                    <label>手动添加模型</label>
-                    <div style="display: flex; gap: 8px;">
-                        <input type="text" id="manual-model-input" placeholder="例如：deepseek-chat" style="flex: 1;">
-                        <button id="add-manual-model-btn" style="padding: 8px 12px;">添加</button>
+                <div class="page-body">
+                    <div class="profile-section">
+                        <h3 class="section-title">API 配置</h3>
+                        <div class="form-field">
+                            <label>AI 提供商</label>
+                            <select id="provider-select">
+                                <option value="openai">OpenAI</option>
+                                <option value="anthropic">Anthropic</option>
+                                <option value="deepseek">DeepSeek</option>
+                                <option value="qwen">阿里千问</option>
+                                <option value="glm">智谱 AI</option>
+                                <option value="moonshot">月之暗面</option>
+                                <option value="doubao">字节豆包</option>
+                                <option value="yi">零一万物</option>
+                                <option value="custom">自定义</option>
+                            </select>
+                        </div>
+                        <div class="form-field">
+                            <label>API Key</label>
+                            <input type="password" id="api-key" placeholder="sk-...">
+                        </div>
+                        <div class="form-field" id="custom-endpoint-group" style="display:none;">
+                            <label>自定义端点</label>
+                            <input type="text" id="custom-endpoint" placeholder="https://api.example.com/v1/chat">
+                        </div>
+                        <div class="form-field">
+                            <label>模型</label>
+                            <div style="display:flex;gap:8px;">
+                                <select id="model-select" style="flex:1;"></select>
+                                <button class="icon-btn" id="refresh-models-btn" title="刷新">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="form-field">
+                            <label style="display:flex;align-items:center;gap:8px;">
+                                <input type="checkbox" id="enable-thinking"> 启用思考模式
+                            </label>
+                            <span class="field-hint">让模型先思考再回答（仅部分模型支持）</span>
+                        </div>
+                        <div class="form-field">
+                            <label style="display:flex;align-items:center;gap:8px;">
+                                <input type="checkbox" id="show-thinking"> 显示思考过程
+                            </label>
+                        </div>
+                        <button class="primary-btn" id="save-settings-btn">保存设置</button>
+                    </div>
+                    <div class="profile-section">
+                        <h3 class="section-title">创作统计</h3>
+                        <div class="stats-grid" id="stats-grid">
+                            <!-- 动态渲染 -->
+                        </div>
                     </div>
                 </div>
-                <div class="form-group">
-                    <label>当前模型列表</label>
-                    <div id="current-models-list" style="max-height: 150px; overflow-y: auto; background: var(--charcoal); padding: 8px; border-radius: 8px; font-size: 12px;"></div>
-                </div>
-                <div class="form-group">
-                    <label style="display: flex; align-items: center; gap: 8px;">
-                        <input type="checkbox" id="enable-thinking"> 启用思考模式
-                    </label>
-                    <span style="font-size: 12px; color: var(--ink-wash); display: block; margin-top: 4px;">让模型在回答前先思考（仅支持具备思考能力的模型）</span>
-                </div>
-                <div class="form-group">
-                    <label style="display: flex; align-items: center; gap: 8px;">
-                        <input type="checkbox" id="show-thinking"> 显示思考过程
-                    </label>
-                    <span style="font-size: 12px; color: var(--ink-wash); display: block; margin-top: 4px;">在输出中显示模型的思考内容</span>
-                </div>
-                <button class="save-settings-btn" id="save-settings-btn">保存设置</button>
             </div>
         </div>
 
+        <!-- 底部导航 -->
+        <nav class="bottom-nav">
+            <button class="nav-item active" data-page="bookshelf">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                </svg>
+                <span>书架</span>
+            </button>
+            <button class="nav-item" data-page="create">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                <span>创作</span>
+            </button>
+            <button class="nav-item" data-page="profile">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+                <span>我的</span>
+            </button>
+        </nav>
+
+        <!-- 阅读器覆盖层 -->
+        <div class="reader-overlay" id="reader-overlay" style="display:none;">
+            <div class="reader-header" id="reader-header">
+                <button class="reader-back-btn" id="reader-back-btn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                </button>
+                <div class="reader-title-info">
+                    <div class="reader-book-title" id="reader-book-title"></div>
+                    <div class="reader-chapter-title" id="reader-chapter-title"></div>
+                </div>
+            </div>
+            <div class="reader-body" id="reader-body">
+                <div class="reader-content" id="reader-content"></div>
+            </div>
+            <div class="reader-footer" id="reader-footer">
+                <button class="chapter-nav-btn" id="prev-chapter-btn">上一章</button>
+                <span class="chapter-indicator" id="chapter-indicator">1 / 1</span>
+                <button class="chapter-nav-btn" id="next-chapter-btn">下一章</button>
+            </div>
+        </div>
+
+        <!-- Toast -->
         <div class="toast" id="toast"></div>
-
-        <div class="templates-panel" id="templates-panel">
-            <div class="templates-header">
-                <h2>自定义模板管理</h2>
-                <button class="close-templates" id="close-templates">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                </button>
-            </div>
-            <div class="templates-content">
-                <div class="add-template-form">
-                    <h3>添加新模板</h3>
-                    <div class="form-group">
-                        <label>模板名称</label>
-                        <input type="text" id="new-template-name" placeholder="例如：神秘日记">
-                    </div>
-                    <div class="form-group">
-                        <label>提示词（使用{theme}代替用户输入）</label>
-                        <textarea id="new-template-prompt" placeholder="例如：请以{theme}为主题，写一篇神秘的日记..."></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label>示例</label>
-                        <input type="text" id="new-template-example" placeholder="例如：一封来自未来的信">
-                    </div>
-                    <button class="add-template-btn" id="add-template-btn">添加模板</button>
-                </div>
-                <div class="custom-templates-list">
-                    <h3>我的模板</h3>
-                    <div id="custom-templates-container"></div>
-                </div>
-            </div>
-        </div>
     </div>
     <script type="module" src="/src/main.js"></script>
 </body>
