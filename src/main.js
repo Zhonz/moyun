@@ -51,6 +51,7 @@ class InkverseApp {
         this.updateThinkingUI()
         this.renderStats()
         this.loadApiSettingsUI()
+        this.setupInputHandlers()
     }
 
     // ========== Page Navigation ==========
@@ -191,6 +192,23 @@ class InkverseApp {
     }
 
     // ========== Create Page - Step Workflow ==========
+
+    setupInputHandlers() {
+        const inputs = document.querySelectorAll('.page-create input, .page-create textarea')
+        inputs.forEach(input => {
+            let cursorPos = 0
+            input.addEventListener('input', () => {
+                cursorPos = input.selectionStart
+            })
+            input.addEventListener('focus', () => {
+                if (cursorPos && input.value.length >= cursorPos) {
+                    requestAnimationFrame(() => {
+                        input.setSelectionRange(cursorPos, cursorPos)
+                    })
+                }
+            })
+        })
+    }
 
     setCreateStep(stepId) {
         document.querySelectorAll('.create-step').forEach(step => {
@@ -536,8 +554,15 @@ ${previousChapterSummary}
         this.currentNovel = novel
         this.switchPage('create')
 
-        document.getElementById('novel-title').value = novel.title
-        document.getElementById('novel-genre-hint').value = novel.genreHint || ''
+        const titleInput = document.getElementById('novel-title')
+        const hintInput = document.getElementById('novel-genre-hint')
+
+        if (titleInput && titleInput.value !== novel.title) {
+            titleInput.value = novel.title
+        }
+        if (hintInput && hintInput.value !== (novel.genreHint || '')) {
+            hintInput.value = novel.genreHint || ''
+        }
 
         document.querySelectorAll('.genre-btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.genre === novel.genre)
@@ -905,12 +930,37 @@ ${summary}`
 
     async callAIWithStreaming(messages, onChunk) {
         const providerConfig = AI_PROVIDERS[this.state.provider]
+        const maxRetries = 2
+        let lastError = null
 
-        if (providerConfig.type === 'anthropic') {
-            return await this.callAnthropicStreaming(messages, providerConfig, onChunk)
-        } else {
-            return await this.callOpenAIStreaming(messages, providerConfig, onChunk)
+        for (let attempt = 0; attempt <= maxRetries; attempt++) {
+            try {
+                if (providerConfig.type === 'anthropic') {
+                    return await this.callAnthropicStreaming(messages, providerConfig, onChunk)
+                } else {
+                    return await this.callOpenAIStreaming(messages, providerConfig, onChunk)
+                }
+            } catch (e) {
+                lastError = e
+                if (this._abortWriting) throw e
+                const isNetworkError = e.message.includes('超时') ||
+                    e.message.includes('网络') ||
+                    e.message.includes('fetch') ||
+                    e.message.includes('502') ||
+                    e.message.includes('503') ||
+                    e.message.includes('504') ||
+                    e.message.includes('连接') ||
+                    e.name === 'TypeError'
+                if (attempt < maxRetries && isNetworkError) {
+                    this.showToast(`网络错误，正在重试 (${attempt + 1}/${maxRetries})...`)
+                    await new Promise(r => setTimeout(r, 2000 * (attempt + 1)))
+                    continue
+                }
+                throw e
+            }
         }
+
+        throw lastError
     }
 
     async callOpenAIStreaming(messages, providerConfig, onChunk) {
