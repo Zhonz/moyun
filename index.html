@@ -207,6 +207,23 @@
                             <!-- 动态渲染 -->
                         </div>
                     </div>
+                    <div class="profile-section">
+                        <h3 class="section-title">关于</h3>
+                        <div class="menu-list">
+                            <button class="menu-item" id="show-terms-btn">
+                                <span>用户协议</span>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                            </button>
+                            <button class="menu-item" id="show-privacy-btn">
+                                <span>隐私政策</span>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                            </button>
+                            <button class="menu-item" id="show-about-btn">
+                                <span>关于墨韵</span>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -259,6 +276,52 @@
 
         <!-- Toast -->
         <div class="toast" id="toast"></div>
+
+        <!-- 用户协议确认弹窗（首次启动） -->
+        <div class="modal-overlay" id="consent-modal" style="display:none;">
+            <div class="modal-dialog">
+                <div class="modal-header">
+                    <h2>欢迎使用墨韵</h2>
+                </div>
+                <div class="modal-body">
+                    <p>在使用本应用之前，请您阅读并同意以下协议：</p>
+                    <div class="consent-checkboxes">
+                        <label>
+                            <input type="checkbox" id="consent-terms">
+                            <span>我已阅读并同意 <button class="link-btn" id="consent-terms-link">《用户协议》</button></span>
+                        </label>
+                        <label>
+                            <input type="checkbox" id="consent-privacy">
+                            <span>我已阅读并同意 <button class="link-btn" id="consent-privacy-link">《隐私政策》</button></span>
+                        </label>
+                    </div>
+                    <div class="consent-hint">
+                        您的数据仅存储在本地设备中，不会上传至任何服务器。
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="primary-btn" id="consent-accept-btn">同意并继续</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 通用内容弹窗 -->
+        <div class="modal-overlay" id="content-modal" style="display:none;">
+            <div class="modal-dialog content-modal-dialog">
+                <div class="modal-header">
+                    <h2 id="content-modal-title">标题</h2>
+                    <button class="modal-close-btn" id="content-modal-close">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                </div>
+                <div class="modal-body" id="content-modal-body">
+                    <!-- 动态内容 -->
+                </div>
+                <div class="modal-footer">
+                    <button class="primary-btn" id="content-modal-close-btn">关闭</button>
+                </div>
+            </div>
+        </div>
     </div>
     <script type="module" src="/src/main.js"></script>
 </body>

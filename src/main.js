@@ -31,6 +31,7 @@ class InkverseApp {
         await this.loadState()
         this.initUI()
         this.bindEvents()
+        this.checkConsent()
     }
 
     async loadState() {
@@ -1222,6 +1223,171 @@ ${summary}`
                 }
             }
         })
+
+        // Consent modal
+        document.getElementById('consent-accept-btn')?.addEventListener('click', () => {
+            this.acceptConsent()
+        })
+
+        document.getElementById('consent-terms-link')?.addEventListener('click', (e) => {
+            e.preventDefault()
+            this.showTermsOfService()
+        })
+
+        document.getElementById('consent-privacy-link')?.addEventListener('click', (e) => {
+            e.preventDefault()
+            this.showPrivacyPolicy()
+        })
+
+        // Terms of service button
+        document.getElementById('show-terms-btn')?.addEventListener('click', () => {
+            this.showTermsOfService()
+        })
+
+        // Privacy policy button
+        document.getElementById('show-privacy-btn')?.addEventListener('click', () => {
+            this.showPrivacyPolicy()
+        })
+
+        // About button
+        document.getElementById('show-about-btn')?.addEventListener('click', () => {
+            this.showAbout()
+        })
+
+        // Content modal close
+        document.getElementById('content-modal-close')?.addEventListener('click', () => {
+            this.closeContentModal()
+        })
+
+        document.getElementById('content-modal-close-btn')?.addEventListener('click', () => {
+            this.closeContentModal()
+        })
+    }
+
+    // ========== Consent & Legal ==========
+
+    async checkConsent() {
+        const hasConsented = stateManager.get('hasConsented')
+        if (!hasConsented) {
+            document.getElementById('consent-modal').style.display = 'flex'
+            document.body.style.overflow = 'hidden'
+        }
+    }
+
+    acceptConsent() {
+        const termsChecked = document.getElementById('consent-terms')?.checked
+        const privacyChecked = document.getElementById('consent-privacy')?.checked
+
+        if (!termsChecked || !privacyChecked) {
+            this.showToast('请先阅读并同意所有协议', 'error')
+            return
+        }
+
+        stateManager.set('hasConsented', true)
+        stateManager.save()
+
+        document.getElementById('consent-modal').style.display = 'none'
+        document.body.style.overflow = ''
+    }
+
+    closeContentModal() {
+        document.getElementById('content-modal').style.display = 'none'
+    }
+
+    showContentModal(title, content) {
+        document.getElementById('content-modal-title').textContent = title
+        document.getElementById('content-modal-body').innerHTML = content
+        document.getElementById('content-modal').style.display = 'flex'
+    }
+
+    showTermsOfService() {
+        const content = `
+            <h3>用户协议</h3>
+            <p><strong>更新日期：</strong>2026年7月10日</p>
+            
+            <h4>1. 协议的接受</h4>
+            <p>欢迎使用墨韵（以下简称"本应用"）。本应用由个人开发者开发和维护。</p>
+            <p>通过使用本应用，您表示同意遵守本用户协议的所有条款。如果您不同意本协议，请不要使用本应用。</p>
+            
+            <h4>2. 服务说明</h4>
+            <p>本应用是一款AI小说创作辅助工具，帮助用户生成小说大纲和章节内容。所有AI生成内容均由第三方AI服务提供商生成。</p>
+            
+            <h4>3. 用户义务</h4>
+            <ul>
+                <li>您必须提供真实、准确的信息</li>
+                <li>您必须遵守适用的法律法规</li>
+                <li>您不得使用本应用从事违法或侵犯他人权利的活动</li>
+                <li>您应对自己的API密钥负责，妥善保管</li>
+            </ul>
+            
+            <h4>4. 内容所有权</h4>
+            <p>您使用本应用创作的小说内容的所有权归您所有。本应用仅提供创作辅助服务。</p>
+            
+            <h4>5. 免责声明</h4>
+            <p>本应用按"原样"提供，不提供任何形式的保证。开发者不对因使用本应用而产生的任何损失承担责任。</p>
+            
+            <h4>6. 协议的修改</h4>
+            <p>开发者保留随时修改本协议的权利。修改后的协议将在应用内公告。</p>
+            
+            <h4>7. 联系我们</h4>
+            <p>如有任何问题或建议，请通过应用内反馈渠道联系我们。</p>
+        `
+        this.showContentModal('用户协议', content)
+    }
+
+    showPrivacyPolicy() {
+        const content = `
+            <h3>隐私政策</h3>
+            <p><strong>更新日期：</strong>2026年7月10日</p>
+            
+            <h4>1. 数据收集</h4>
+            <p>本应用非常重视您的隐私。以下是我们收集的数据：</p>
+            <ul>
+                <li><strong>本地存储数据：</strong>您创作的小说内容、章节、大纲等数据仅存储在您的设备本地（IndexedDB），不会上传至任何服务器。</li>
+                <li><strong>API配置：</strong>您输入的API密钥和端点信息仅存储在本地，用于调用AI服务。</li>
+                <li><strong>应用设置：</strong>您的主题偏好、思考模式设置等仅存储在本地。</li>
+            </ul>
+            
+            <h4>2. 数据使用</h4>
+            <p>我们仅使用您的数据来提供和改进本应用的功能：</p>
+            <ul>
+                <li>存储您的小说内容，方便您随时阅读和编辑</li>
+                <li>保存您的API配置，便于您使用AI生成功能</li>
+                <li>记录您的应用设置，提供个性化体验</li>
+            </ul>
+            
+            <h4>3. 数据安全</h4>
+            <p>您的数据仅存储在您的设备上，我们无法访问或查看您的任何数据。请妥善保管您的设备，防止数据丢失或泄露。</p>
+            
+            <h4>4. 第三方服务</h4>
+            <p>本应用使用第三方AI服务提供商（如OpenAI、Anthropic等）来生成内容。您的提示词和生成内容可能会发送给这些第三方服务。请查阅各服务提供商的隐私政策。</p>
+            
+            <h4>5. 儿童隐私</h4>
+            <p>本应用不面向13岁以下儿童。如果您是未成年人，请在家长或监护人的指导下使用。</p>
+            
+            <h4>6. 隐私政策的修改</h4>
+            <p>我们保留随时修改本隐私政策的权利。修改后的政策将在应用内公告。</p>
+        `
+        this.showContentModal('隐私政策', content)
+    }
+
+    showAbout() {
+        const content = `
+            <div class="about-info">
+                <div class="app-name">墨韵</div>
+                <div class="app-version">版本 2.4.0</div>
+                <div class="app-description">
+                    一款专注于小说创作的AI辅助工具。<br>
+                    支持大纲生成、逐章写作、书架管理等功能，<br>
+                    为您的创作之路保驾护航。
+                </div>
+                <div class="app-copyright">
+                    © 2026 墨韵团队<br>
+                    保留所有权利
+                </div>
+            </div>
+        `
+        this.showContentModal('关于墨韵', content)
     }
 
     // ========== Utility Methods ==========
