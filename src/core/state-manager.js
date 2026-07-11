@@ -24,7 +24,7 @@ const AI_PROVIDERS = {
     },
     deepseek: {
         name: "DeepSeek",
-        models: ["deepseek-v4-pro", "deepseek-v4-flash"],
+        models: ["deepseek-v4-flash", "deepseek-v4-pro"],
         endpoint: "https://api.deepseek.com/v1/chat/completions",
         modelsEndpoint: "https://api.deepseek.com/v1/models",
         requiresAuth: true,
@@ -32,7 +32,7 @@ const AI_PROVIDERS = {
     },
     qwen: {
         name: "阿里千问",
-        models: ["qwen-turbo", "qwen-plus", "qwen-max", "qwen-coder-plus"],
+        models: ["qwen-turbo", "qwen-plus", "qwen-max", "qwen-long"],
         endpoint: "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
         modelsEndpoint: "https://dashscope.aliyuncs.com/compatible-mode/v1/models",
         requiresAuth: true,
@@ -40,7 +40,7 @@ const AI_PROVIDERS = {
     },
     glm: {
         name: "智谱AI",
-        models: ["glm-4-flash", "glm-4-plus", "glm-4-long", "glm-4", "glm-3-turbo"],
+        models: ["glm-4-flash", "glm-4-plus", "glm-4-long", "glm-4", "glm-4-air"],
         endpoint: "https://open.bigmodel.cn/api/paas/v4/chat/completions",
         modelsEndpoint: "https://open.bigmodel.cn/api/paas/v4/models",
         requiresAuth: true,
@@ -56,15 +56,15 @@ const AI_PROVIDERS = {
     },
     doubao: {
         name: "字节豆包",
-        models: ["ep-20241204153318-5n6lh", "doubao-seed-pro-32k", "doubao-seed-lite-32k"],
+        models: ["doubao-pro-32k", "doubao-pro-128k", "doubao-lite-32k"],
         endpoint: "https://ark.cn-beijing.volces.com/api/v3/chat/completions",
-        modelsEndpoint: "https://ark.cn-beijing.volces.com/api/v1/models",
+        modelsEndpoint: "https://ark.cn-beijing.volces.com/api/v3/models",
         requiresAuth: true,
         type: "openai"
     },
     yi: {
         name: "零一万物",
-        models: ["yi-lightning", "yi-large", "yi-large-turbo", "yi-medium"],
+        models: ["yi-large", "yi-medium", "yi-spark", "yi-lightning"],
         endpoint: "https://api.lingyiwanwu.com/v1/chat/completions",
         modelsEndpoint: "https://api.lingyiwanwu.com/v1/models",
         requiresAuth: true,
@@ -229,13 +229,12 @@ class StateManager {
 
     /**
      * 确保每个提供商都有默认模型
+     * 始终用硬编码的最新模型列表覆盖，防止旧的无效模型名残留
      */
     ensureDefaultModels() {
         for (const [provider, config] of Object.entries(AI_PROVIDERS)) {
-            if (!this.state.cachedModels[provider] || this.state.cachedModels[provider].length === 0) {
-                if (config.models && config.models.length > 0) {
-                    this.state.cachedModels[provider] = [...config.models];
-                }
+            if (config.models && config.models.length > 0) {
+                this.state.cachedModels[provider] = [...config.models];
             }
         }
     }

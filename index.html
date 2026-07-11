@@ -92,15 +92,24 @@
                                     </div>
                                     <div id="outline-content" style="display:none;">
                                         <div class="outline-block">
-                                            <h3>故事大纲</h3>
+                                            <div class="outline-block-header">
+                                                <h3>故事大纲</h3>
+                                                <button class="copy-btn" data-copy-target="outline-text">复制</button>
+                                            </div>
                                             <div id="outline-text" class="outline-text"></div>
                                         </div>
                                         <div class="outline-block">
-                                            <h3>伏笔设计</h3>
+                                            <div class="outline-block-header">
+                                                <h3>伏笔设计</h3>
+                                                <button class="copy-btn" data-copy-target="foreshadowing-text">复制</button>
+                                            </div>
                                             <div id="foreshadowing-text" class="outline-text"></div>
                                         </div>
                                         <div class="outline-block">
-                                            <h3>写法说明</h3>
+                                            <div class="outline-block-header">
+                                                <h3>写法说明</h3>
+                                                <button class="copy-btn" data-copy-target="writing-style-text">复制</button>
+                                            </div>
                                             <div id="writing-style-text" class="outline-text"></div>
                                         </div>
                                     </div>
@@ -174,7 +183,10 @@
                         </div>
                         <div class="form-field">
                             <label>API Key</label>
-                            <input type="password" id="api-key" placeholder="sk-...">
+                            <div class="input-with-action">
+                                <input type="password" id="api-key" placeholder="sk-..." autocomplete="off">
+                                <button class="input-action-btn" id="toggle-api-key-btn" title="显示/隐藏">👁</button>
+                            </div>
                         </div>
                         <div class="form-field" id="custom-endpoint-group" style="display:none;">
                             <label>自定义端点</label>
@@ -264,6 +276,9 @@
                     <div class="reader-book-title" id="reader-book-title"></div>
                     <div class="reader-chapter-title" id="reader-chapter-title"></div>
                 </div>
+                <button class="reader-action-btn" id="copy-chapter-btn" title="复制本章">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                </button>
             </div>
             <div class="reader-body" id="reader-body">
                 <div class="reader-content" id="reader-content"></div>

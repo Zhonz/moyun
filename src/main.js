@@ -979,16 +979,35 @@ ${summary}`
             } catch (e) {
                 lastError = e
                 if (this._abortWriting) throw e
-                const isNetworkError = e.message.includes('超时') ||
+
+                // 配置类错误不重试（用户需要去设置）
+                const isConfigError = e.message.includes('未设置') ||
+                    e.message.includes('未配置') ||
+                    e.message.includes('未选择')
+                if (isConfigError) throw e
+
+                // CORS/跨域错误不重试（重试也必然失败）
+                const isCorsError = e.message.includes('CORS') ||
+                    e.message.includes('跨域') ||
+                    e.message.includes('同源')
+                if (isCorsError) throw e
+
+                // 4xx 客户端错误不重试（Key/模型/请求体错误，重试无效）
+                const isClientError = /\b4\d{2}\b/.test(e.message) &&
+                    !e.message.includes('429') // 429 限流可重试
+                if (isClientError) throw e
+
+                // 只对真正的网络错误、超时、5xx、429 重试
+                const isRetryable = e.message.includes('超时') ||
                     e.message.includes('网络') ||
-                    e.message.includes('fetch') ||
+                    e.message.includes('连接') ||
                     e.message.includes('502') ||
                     e.message.includes('503') ||
                     e.message.includes('504') ||
-                    e.message.includes('连接') ||
-                    e.name === 'TypeError'
-                if (attempt < maxRetries && isNetworkError) {
-                    this.showToast(`网络错误，正在重试 (${attempt + 1}/${maxRetries})...`)
+                    e.message.includes('429') ||
+                    e.message.includes('服务器')
+                if (attempt < maxRetries && isRetryable) {
+                    this.showToast(`请求失败，正在重试 (${attempt + 1}/${maxRetries})...`)
                     await new Promise(r => setTimeout(r, 2000 * (attempt + 1)))
                     continue
                 }
@@ -999,12 +1018,85 @@ ${summary}`
         throw lastError
     }
 
+    /**
+     * 包装底层网络错误，区分 CORS、断网、DNS 等情况
+     */
+    wrapNetworkError(error, endpoint) {
+        const msg = error.message || ''
+        // AbortError 来自超时
+        if (error.name === 'AbortError' || msg.includes('超时')) {
+            return new Error(`请求超时（服务器响应过慢或无法连接）`)
+        }
+        // TypeError: Failed to fetch —— 在 WebView 中最常见的原因是 CORS 跨域拦截
+        if (error.name === 'TypeError' || msg.includes('Failed to fetch') || msg.includes('fetch')) {
+            return new Error(
+                `无法连接到API服务（可能原因：1. CORS跨域拦截 2. 网络不通 3. 端点错误）。\n` +
+                `端点：${endpoint}\n` +
+                `建议：在"我的"页面改用支持浏览器直连的服务商，或配置自定义代理端点。`
+            )
+        }
+        // 其他网络错误
+        return new Error(`网络请求失败：${msg || error.name}`)
+    }
+
+    /**
+     * 读取 HTTP 错误响应体，获取服务端返回的具体错误信息
+     */
+    async readErrorBody(response) {
+        try {
+            const text = await response.text()
+            // 尝试解析为 JSON 提取 error.message
+            try {
+                const json = JSON.parse(text)
+                return json.error?.message || json.message || json.error || text
+            } catch {
+                return text
+            }
+        } catch {
+            return ''
+        }
+    }
+
+    /**
+     * 根据 HTTP 状态码格式化可读的错误信息
+     */
+    formatHttpError(status, detail) {
+        const map = {
+            400: '请求参数错误（模型名可能不正确，或请求格式有误）',
+            401: 'API Key 无效或未授权，请检查"我的"页面的 Key 配置',
+            403: '拒绝访问（Key 无权限或账户欠费）',
+            404: 'API 端点不存在（请检查端点地址或模型名）',
+            413: '请求体过大',
+            422: '请求格式无法处理（模型名或参数错误）',
+            429: '请求过于频繁或额度已用尽，请稍后再试',
+            500: '服务器内部错误',
+            502: '网关错误（服务不可用）',
+            503: '服务暂时不可用',
+            504: '网关超时'
+        }
+        const base = map[status] || `HTTP ${status}`
+        const suffix = detail ? `：${detail}` : ''
+        return `${base}${suffix}`
+    }
+
     async callOpenAIStreaming(messages, providerConfig, onChunk) {
         const apiKey = stateManager.getApiKey()
         const customEndpoint = stateManager.getCustomEndpoint()
         const endpoint = this.state.provider === 'custom'
             ? customEndpoint
             : providerConfig.endpoint
+
+        if (!endpoint) {
+            throw new Error('未配置API端点，请在"我的"页面设置自定义端点')
+        }
+
+        if (!apiKey) {
+            throw new Error('未设置API Key，请在"我的"页面配置')
+        }
+
+        if (!this.state.model) {
+            throw new Error('未选择模型，请在"我的"页面选择')
+        }
 
         const requestBody = {
             model: this.state.model,
@@ -1018,17 +1110,23 @@ ${summary}`
             requestBody.reasoning_effort = 'medium'
         }
 
-        const response = await apiHandler.fetchWithTimeout(endpoint, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${apiKey}`
-            },
-            body: JSON.stringify(requestBody)
-        }, 120000)
+        let response
+        try {
+            response = await apiHandler.fetchWithTimeout(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`
+                },
+                body: JSON.stringify(requestBody)
+            }, 120000)
+        } catch (e) {
+            throw this.wrapNetworkError(e, endpoint)
+        }
 
         if (!response.ok) {
-            throw new Error(`API请求失败：${response.status}`)
+            const errorDetail = await this.readErrorBody(response)
+            throw new Error(this.formatHttpError(response.status, errorDetail))
         }
 
         const reader = response.body.getReader()
@@ -1096,6 +1194,14 @@ ${summary}`
             content: m.content
         }))
 
+        if (!apiKey) {
+            throw new Error('未设置API Key，请在"我的"页面配置')
+        }
+
+        if (!this.state.model) {
+            throw new Error('未选择模型，请在"我的"页面选择')
+        }
+
         const requestBody = {
             model: this.state.model,
             max_tokens: 8192,
@@ -1111,19 +1217,25 @@ ${summary}`
             }
         }
 
-        const response = await apiHandler.fetchWithTimeout(providerConfig.endpoint, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-api-key': apiKey,
-                'anthropic-version': '2023-06-01',
-                'anthropic-dangerous-direct-browser-access': 'true'
-            },
-            body: JSON.stringify(requestBody)
-        }, 120000)
+        let response
+        try {
+            response = await apiHandler.fetchWithTimeout(providerConfig.endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-api-key': apiKey,
+                    'anthropic-version': '2023-06-01',
+                    'anthropic-dangerous-direct-browser-access': 'true'
+                },
+                body: JSON.stringify(requestBody)
+            }, 120000)
+        } catch (e) {
+            throw this.wrapNetworkError(e, providerConfig.endpoint)
+        }
 
         if (!response.ok) {
-            throw new Error(`API请求失败：${response.status}`)
+            const errorDetail = await this.readErrorBody(response)
+            throw new Error(this.formatHttpError(response.status, errorDetail))
         }
 
         const reader = response.body.getReader()
@@ -1353,6 +1465,40 @@ ${summary}`
         }, 2500)
     }
 
+    async copyToClipboard(text) {
+        if (!text) {
+            this.showToast('没有可复制的内容', 'error')
+            return
+        }
+        try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                await navigator.clipboard.writeText(text)
+            } else {
+                const textarea = document.createElement('textarea')
+                textarea.value = text
+                textarea.style.position = 'fixed'
+                textarea.style.opacity = '0'
+                document.body.appendChild(textarea)
+                textarea.select()
+                document.execCommand('copy')
+                document.body.removeChild(textarea)
+            }
+            this.showToast('已复制到剪贴板')
+        } catch (e) {
+            this.showToast('复制失败，请手动选择文本复制', 'error')
+        }
+    }
+
+    async copyCurrentChapter() {
+        const contentEl = document.getElementById('reader-content')
+        const titleEl = document.getElementById('reader-chapter-title')
+        if (!contentEl) return
+        const title = titleEl?.textContent || ''
+        const content = contentEl.textContent || ''
+        const fullText = title ? `${title}\n\n${content}` : content
+        await this.copyToClipboard(fullText)
+    }
+
     // ========== Event Bindings ==========
 
     bindEvents() {
@@ -1408,6 +1554,37 @@ ${summary}`
         // Reader back button
         document.getElementById('reader-back-btn')?.addEventListener('click', () => {
             this.closeReader()
+        })
+
+        // Copy current chapter
+        document.getElementById('copy-chapter-btn')?.addEventListener('click', () => {
+            this.copyCurrentChapter()
+        })
+
+        // Toggle API Key visibility
+        document.getElementById('toggle-api-key-btn')?.addEventListener('click', () => {
+            const input = document.getElementById('api-key')
+            if (input) {
+                input.type = input.type === 'password' ? 'text' : 'password'
+            }
+        })
+
+        // Copy buttons in outline page
+        document.querySelectorAll('.copy-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const targetId = btn.dataset.copyTarget
+                const targetEl = document.getElementById(targetId)
+                if (targetEl) {
+                    this.copyToClipboard(targetEl.textContent || targetEl.value)
+                    const originalText = btn.textContent
+                    btn.textContent = '已复制'
+                    btn.classList.add('copied')
+                    setTimeout(() => {
+                        btn.textContent = originalText
+                        btn.classList.remove('copied')
+                    }, 1500)
+                }
+            })
         })
 
         // Reader prev/next chapter
