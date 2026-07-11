@@ -260,6 +260,11 @@ class NovelStore {
         const novels = await this.getAllNovels();
         return novels.find(n => n.status === 'writing' && n.autoContinue) || null;
     }
+
+    async getAutoContinueNovels() {
+        const novels = await this.getAllNovels();
+        return novels.filter(n => n.status === 'writing' && n.autoContinue);
+    }
 }
 
 const novelStore = new NovelStore();

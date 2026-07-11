@@ -20,8 +20,8 @@ class InkverseApp {
         this.currentGenre = 'medium'
         this.currentTargetChapters = 50
         this.isGenerating = false
-        this.isWriting = false
-        this._abortWriting = false
+        this.writingTasks = new Map()
+        this._bgServiceRunning = false
         this.readerState = { novelId: null, chapterIndex: 0, chapters: [], novel: null }
 
         this.initApp()
@@ -77,7 +77,8 @@ class InkverseApp {
             this.loadApiSettingsUI()
         } else if (pageName === 'create') {
             // Only reset if not currently writing or editing
-            if (!this.isWriting && !this.currentNovelId) {
+            const currentTask = this.currentNovelId ? this.writingTasks.get(this.currentNovelId) : null
+            if (!currentTask && !this.currentNovelId) {
                 this.resetCreatePage()
             }
         }
@@ -107,7 +108,7 @@ class InkverseApp {
 
         const novels = await novelStore.getAllNovels()
 
-        if (novels.length === 0) {
+        if (novels.length === 0 && this.writingTasks.size === 0) {
             container.innerHTML = `
                 <div class="book-empty">
                     <div class="book-empty-icon">📚</div>
@@ -120,6 +121,41 @@ class InkverseApp {
                 goCreateBtn.addEventListener('click', () => this.switchPage('create'))
             }
             return
+        }
+
+        let activeTasksHtml = ''
+        if (this.writingTasks.size > 0) {
+            const taskItems = []
+            for (const [novelId, task] of this.writingTasks) {
+                const novel = novels.find(n => n.id === novelId)
+                const title = novel?.title || task.novelTitle || '未知小说'
+                const current = task.currentChapter + 1
+                const total = task.totalChapters
+                const pct = total > 0 ? Math.round((task.currentChapter / total) * 100) : 0
+                taskItems.push(`
+                    <div class="active-task-item" data-novel-id="${novelId}">
+                        <div class="active-task-info">
+                            <div class="active-task-title">${this.escapeHtml(title)}</div>
+                            <div class="active-task-progress-text">第 ${current}/${total} 章 (${pct}%)</div>
+                        </div>
+                        <div class="active-task-progress">
+                            <div class="active-task-progress-fill" style="width:${pct}%"></div>
+                        </div>
+                        <button class="active-task-stop-btn" data-stop-id="${novelId}" title="暂停">⏸</button>
+                    </div>
+                `)
+            }
+            activeTasksHtml = `
+                <div class="active-tasks-section">
+                    <div class="active-tasks-header">
+                        <span class="active-tasks-title">⚡ 生成中 (${this.writingTasks.size})</span>
+                        <span class="active-tasks-hint">后台持续生成中</span>
+                    </div>
+                    <div class="active-tasks-list">
+                        ${taskItems.join('')}
+                    </div>
+                </div>
+            `
         }
 
         const bookItemsHtml = await Promise.all(novels.map(async novel => {
@@ -178,7 +214,10 @@ class InkverseApp {
             `
         }))
 
-        container.innerHTML = `<div class="book-grid">${bookItemsHtml.join('')}</div>`
+        container.innerHTML = `
+            ${activeTasksHtml}
+            <div class="book-grid">${bookItemsHtml.join('')}</div>
+        `
 
         container.querySelectorAll('.book-item').forEach(item => {
             const novelId = item.dataset.novelId
@@ -208,6 +247,22 @@ class InkverseApp {
             item.addEventListener('click', (e) => {
                 if (e.target.closest('.book-actions')) return
                 this.openReader(novelId, -1)
+            })
+        })
+
+        container.querySelectorAll('.active-task-stop-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation()
+                const novelId = btn.dataset.stopId
+                this.stopWriting(novelId)
+                setTimeout(() => this.renderBookshelf(), 100)
+            })
+        })
+
+        container.querySelectorAll('.active-task-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const novelId = item.dataset.novelId
+                this.resumeWriting(novelId)
             })
         })
     }
@@ -411,30 +466,59 @@ class InkverseApp {
     }
 
     async startWriting(fromChapterIndex = null) {
-        if (this.isWriting) {
-            this.showToast('正在写作中...', 'error')
-            return
-        }
-
         if (!this.currentNovelId) {
             this.showToast('请先确认大纲', 'error')
             return
         }
 
-        const novel = await novelStore.getNovel(this.currentNovelId)
+        const novelId = this.currentNovelId
+        const existingTask = this.writingTasks.get(novelId)
+        if (existingTask && !existingTask.aborted) {
+            this.showToast('这本小说正在生成中', 'error')
+            return
+        }
+
+        const novel = await novelStore.getNovel(novelId)
         if (!novel) {
             this.showToast('小说不存在', 'error')
             return
         }
 
-        this.isWriting = true
-        this._abortWriting = false
-        this._writingNovelId = novel.id
-        this.updateWritingButtonState(true)
+        const task = {
+            novelId,
+            novelTitle: novel.title,
+            aborted: false,
+            currentChapter: 0,
+            totalChapters: novel.targetChapters,
+            running: true
+        }
+        this.writingTasks.set(novelId, task)
 
         await novelStore.updateNovel(novel.id, { autoContinue: true })
 
-        const chapters = await novelStore.getChaptersByNovelId(novel.id)
+        this.updateWritingButtonState(true)
+        this.ensureBackgroundService()
+
+        this._runWritingTask(novelId, fromChapterIndex).finally(() => {
+            this.writingTasks.delete(novelId)
+            if (this.writingTasks.size === 0) {
+                this.stopBackgroundService()
+            }
+            if (this.currentNovelId === novelId) {
+                this.updateWritingButtonState(false)
+            }
+            this.renderBookshelf()
+        })
+    }
+
+    async _runWritingTask(novelId, fromChapterIndex = null) {
+        const task = this.writingTasks.get(novelId)
+        if (!task) return
+
+        const novel = await novelStore.getNovel(novelId)
+        if (!novel) return
+
+        const chapters = await novelStore.getChaptersByNovelId(novelId)
 
         let startIndex = 0
         if (fromChapterIndex !== null) {
@@ -445,16 +529,21 @@ class InkverseApp {
         }
 
         for (let i = startIndex; i < chapters.length; i++) {
-            if (this._abortWriting) break
+            if (task.aborted) break
 
             const chapter = chapters[i]
             if (chapter.status === 'completed') continue
 
+            task.currentChapter = i
             await novelStore.updateChapter(chapter.id, { status: 'generating' })
-            this.renderChapterList()
-            this.updateWritingProgress(i, chapters.length)
 
-            const previousChapterSummary = await this.getPreviousChapterSummary(novel.id, i)
+            if (this.currentNovelId === novelId) {
+                this.renderChapterList()
+                this.updateWritingProgress(i, chapters.length)
+            }
+            this.updateBackgroundNotification()
+
+            const previousChapterSummary = await this.getPreviousChapterSummary(novelId, i)
             const chapterTitle = `第${i + 1}章`
 
             const prompt = `你是一位小说家，正在创作小说《${novel.title}》。
@@ -488,15 +577,16 @@ ${previousChapterSummary}
 
             try {
                 const content = await this.callAIWithStreaming(messages, (chunk) => {
-                    if (this._abortWriting) return
+                    if (task.aborted) return
                     accumulatedContent += chunk
                     novelStore.updateChapter(currentChapterId, {
                         content: accumulatedContent,
                         wordCount: accumulatedContent.length
                     }).catch(() => {})
-                    this._currentWritingChapter = i
-                    this.renderChapterList()
-                })
+                    if (this.currentNovelId === novelId) {
+                        this.renderChapterList()
+                    }
+                }, novelId)
 
                 const titleMatch = content.match(/\{(.+?)\}/)
                 const finalTitle = titleMatch ? titleMatch[1] : chapterTitle
@@ -508,50 +598,65 @@ ${previousChapterSummary}
                     title: finalTitle
                 })
 
-                const stats = await novelStore.getNovelStats(novel.id)
-                await novelStore.updateNovel(novel.id, {
+                const stats = await novelStore.getNovelStats(novelId)
+                await novelStore.updateNovel(novelId, {
                     currentChapter: i + 1,
                     totalWords: stats.totalWords,
                     lastGeneratedContent: content.slice(-200)
                 })
 
             } catch (e) {
-                if (this._abortWriting) {
+                if (task.aborted) {
                     await novelStore.updateChapter(currentChapterId, { status: 'pending' })
                     break
                 }
-                this.showToast(`第${i + 1}章生成失败：${e.message}`, 'error')
+                this.showToast(`《${novel.title}》第${i + 1}章生成失败：${e.message}`, 'error')
                 await novelStore.updateChapter(currentChapterId, { status: 'pending' })
-                this.isWriting = false
-                this.renderChapterList()
+                task.running = false
                 return
             }
 
-            this.renderChapterList()
-            this.updateWritingProgress(i + 1, chapters.length)
+            if (this.currentNovelId === novelId) {
+                this.renderChapterList()
+                this.updateWritingProgress(i + 1, chapters.length)
+            }
         }
 
-        this.isWriting = false
-        this._writingNovelId = null
-        this.updateWritingButtonState(false)
+        task.running = false
+        await novelStore.updateNovel(novelId, { autoContinue: false })
 
-        await novelStore.updateNovel(novel.id, { autoContinue: false })
-
-        const finalStats = await novelStore.getNovelStats(novel.id)
+        const finalStats = await novelStore.getNovelStats(novelId)
         if (finalStats.completedChapters >= novel.targetChapters) {
-            await novelStore.updateNovel(novel.id, { status: 'completed', autoContinue: false })
-            this.showToast('🎉 小说创作完成！')
+            await novelStore.updateNovel(novelId, { status: 'completed', autoContinue: false })
+            this.showToast(`🎉 《${novel.title}》创作完成！`)
         }
     }
 
-    stopWriting() {
-        this._abortWriting = true
-        this.isWriting = false
-        if (this._writingNovelId) {
-            novelStore.updateNovel(this._writingNovelId, { autoContinue: false }).catch(() => {})
+    stopWriting(novelId = null) {
+        const targetId = novelId || this.currentNovelId
+        if (!targetId) return
+
+        const task = this.writingTasks.get(targetId)
+        if (task) {
+            task.aborted = true
+            task.running = false
         }
-        this.updateWritingButtonState(false)
+
+        novelStore.updateNovel(targetId, { autoContinue: false }).catch(() => {})
+
+        if (this.currentNovelId === targetId) {
+            this.updateWritingButtonState(false)
+        }
         this.showToast('已暂停生成')
+    }
+
+    stopAllWriting() {
+        for (const [novelId, task] of this.writingTasks) {
+            task.aborted = true
+            task.running = false
+            novelStore.updateNovel(novelId, { autoContinue: false }).catch(() => {})
+        }
+        this.stopBackgroundService()
     }
 
     updateWritingButtonState(isWriting) {
@@ -559,6 +664,74 @@ ${previousChapterSummary}
         const stopBtn = document.getElementById('stop-writing-btn')
         if (startBtn) startBtn.style.display = isWriting ? 'none' : 'inline-flex'
         if (stopBtn) stopBtn.style.display = isWriting ? 'inline-flex' : 'none'
+    }
+
+    isWriting(novelId = null) {
+        if (novelId) {
+            const task = this.writingTasks.get(novelId)
+            return task && task.running
+        }
+        return this.writingTasks.size > 0
+    }
+
+    // ========== Background Service ==========
+
+    async ensureBackgroundService() {
+        if (this._bgServiceRunning) {
+            this.updateBackgroundNotification()
+            return
+        }
+        if (typeof window !== 'undefined' && window.Capacitor?.Plugins?.BackgroundGenerator) {
+            try {
+                const count = this.writingTasks.size
+                const firstTask = this.writingTasks.values().next().value
+                const title = count > 1
+                    ? `${count}本小说生成中`
+                    : `正在生成：${firstTask?.novelTitle || '小说'}`
+                const content = `后台生成中，请勿关闭应用`
+                await window.Capacitor.Plugins.BackgroundGenerator.start({ title, content })
+                this._bgServiceRunning = true
+            } catch (e) {
+                console.warn('Failed to start background service:', e)
+            }
+        }
+    }
+
+    async updateBackgroundNotification() {
+        if (!this._bgServiceRunning) return
+        if (typeof window !== 'undefined' && window.Capacitor?.Plugins?.BackgroundGenerator) {
+            try {
+                const count = this.writingTasks.size
+                if (count === 0) return
+                let totalProgress = 0
+                let totalChapters = 0
+                for (const task of this.writingTasks.values()) {
+                    totalProgress += task.currentChapter
+                    totalChapters += task.totalChapters
+                }
+                const content = count > 1
+                    ? `${count}本生成中 · 共 ${totalChapters} 章`
+                    : `第 ${totalProgress + 1}/${totalChapters} 章`
+                const title = count > 1
+                    ? `${count}本小说生成中`
+                    : `正在生成：${this.writingTasks.values().next().value?.novelTitle || '小说'}`
+                await window.Capacitor.Plugins.BackgroundGenerator.start({ title, content })
+            } catch (e) {
+                // ignore
+            }
+        }
+    }
+
+    async stopBackgroundService() {
+        if (!this._bgServiceRunning) return
+        if (typeof window !== 'undefined' && window.Capacitor?.Plugins?.BackgroundGenerator) {
+            try {
+                await window.Capacitor.Plugins.BackgroundGenerator.stop()
+            } catch (e) {
+                console.warn('Failed to stop background service:', e)
+            }
+        }
+        this._bgServiceRunning = false
     }
 
     async resumeWriting(novelId) {
@@ -620,12 +793,35 @@ ${previousChapterSummary}
     }
 
     async checkAndResumeWriting() {
-        const activeNovel = await novelStore.getActiveWritingNovel()
-        if (activeNovel) {
-            this.showToast('检测到未完成的生成，正在恢复...')
+        const activeNovels = await novelStore.getAutoContinueNovels()
+        if (activeNovels && activeNovels.length > 0) {
+            const count = activeNovels.length
+            this.showToast(`检测到 ${count} 本未完成的生成，正在恢复...`)
             setTimeout(() => {
-                this.resumeWriting(activeNovel.id)
+                for (let i = 0; i < activeNovels.length; i++) {
+                    setTimeout(() => {
+                        this.continueNovelInBackground(activeNovels[i].id)
+                    }, i * 500)
+                }
             }, 1000)
+        }
+    }
+
+    async continueNovelInBackground(novelId) {
+        const novel = await novelStore.getNovel(novelId)
+        if (!novel) return
+        if (novel.status === 'completed') return
+
+        const chapters = await novelStore.getChaptersByNovelId(novelId)
+        const firstPendingIndex = chapters.findIndex(c => c.status === 'pending' || c.status === 'generating')
+        if (firstPendingIndex < 0) return
+
+        const prevNovelId = this.currentNovelId
+        this.currentNovelId = novelId
+        try {
+            await this.startWriting(firstPendingIndex)
+        } finally {
+            if (prevNovelId) this.currentNovelId = prevNovelId
         }
     }
 
@@ -964,21 +1160,29 @@ ${summary}`
 
     // ========== API Call Methods ==========
 
-    async callAIWithStreaming(messages, onChunk) {
+    async callAIWithStreaming(messages, onChunk, novelId = null) {
         const providerConfig = AI_PROVIDERS[this.state.provider]
         const maxRetries = 2
         let lastError = null
 
+        const isAborted = () => {
+            if (novelId) {
+                const task = this.writingTasks.get(novelId)
+                return task?.aborted
+            }
+            return false
+        }
+
         for (let attempt = 0; attempt <= maxRetries; attempt++) {
             try {
                 if (providerConfig.type === 'anthropic') {
-                    return await this.callAnthropicStreaming(messages, providerConfig, onChunk)
+                    return await this.callAnthropicStreaming(messages, providerConfig, onChunk, novelId)
                 } else {
-                    return await this.callOpenAIStreaming(messages, providerConfig, onChunk)
+                    return await this.callOpenAIStreaming(messages, providerConfig, onChunk, novelId)
                 }
             } catch (e) {
                 lastError = e
-                if (this._abortWriting) throw e
+                if (isAborted()) throw e
 
                 // 配置类错误不重试（用户需要去设置）
                 const isConfigError = e.message.includes('未设置') ||
