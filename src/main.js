@@ -1156,11 +1156,9 @@ ${summary}`
                                 if (showThinking) {
                                     const wrappedContent = this.wrapThinkingContent(reasoningContent, isInReasoning)
                                     if (!isInReasoning) isInReasoning = true
-                                    fullContent += reasoningContent
                                     onChunk(wrappedContent)
-                                } else {
-                                    fullContent += reasoningContent
                                 }
+                                // 不将思考内容加入 fullContent，避免混入正文
                             }
 
                             if (delta.content) {
@@ -1263,11 +1261,9 @@ ${summary}`
                             if (thinkingContent && showThinking) {
                                 const wrappedContent = this.wrapThinkingContent(thinkingContent, isInReasoning)
                                 if (!isInReasoning) isInReasoning = true
-                                fullContent += thinkingContent
                                 onChunk(wrappedContent)
-                            } else if (thinkingContent) {
-                                fullContent += thinkingContent
                             }
+                            // 不将思考内容加入 fullContent，避免混入正文
                         }
 
                         if (parsed.type === 'content_block_delta' || parsed.delta?.text) {
